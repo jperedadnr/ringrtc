@@ -10,6 +10,8 @@ set -e
 # shellcheck source=bin/env.sh
 . "$(dirname "$0")"/env.sh
 
+JEXTRACT=/opt/jextract-19
+JDK=/opt/jdk-19
 TARGET_ARCH=${TARGET_ARCH:-x64}
 
 usage()
@@ -125,7 +127,7 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
     then
         RUSTFLAGS="${RUSTFLAGS_WIN}" OUTPUT_DIR="${OUTPUT_DIR}" cargo build --target ${CARGO_TARGET} --features java
     else
-        RUSTFLAGS="-C link-arg=-s ${RUSTFLAGS_WIN}" OUTPUT_DIR="${OUTPUT_DIR}" cargo build --target ${CARGO_TARGET} --features java --release
+        OUTPUT_DIR="${OUTPUT_DIR}" cargo build --lib --features java --release
     fi
 
     if [ $DEFAULT_PLATFORM = "darwin" ]
@@ -139,6 +141,10 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
     elif [ $DEFAULT_PLATFORM = "linux" ]
     then
         mkdir -p ../java/build/linux
+        cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/libringrtc.so ../java/tring/src/main/resources/libringrtc.so
         cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/libringrtc.so ../java/build/linux/libringrtc-"${TARGET_ARCH}".java
     fi
+    ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/linux --output ../java/tring/src/main/java --source -t io.privacyresearch.tring -l ringrtc tringlib.h
+    cd ../java/tring
+    mvn clean install
 )

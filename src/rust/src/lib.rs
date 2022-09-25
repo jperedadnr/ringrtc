@@ -57,6 +57,7 @@ pub mod protobuf;
 
 #[cfg(any(target_os = "android", feature = "check-all"))]
 /// Android specific implementation.
+/// cbindgen:ignore
 mod android {
     #[macro_use]
     mod jni_util;
@@ -75,6 +76,7 @@ mod android {
 
 #[cfg(any(target_os = "ios", feature = "check-all"))]
 /// iOS specific implementation.
+/// cbindgen:ignore
 mod ios {
     mod api {
         pub mod call_manager_interface;
@@ -90,6 +92,10 @@ pub mod electron;
 
 #[cfg(feature = "native")]
 pub mod native;
+
+#[cfg(feature = "java")]
+mod java {
+}
 
 /// Foreign Function Interface (FFI) to WebRTC C++ library.
 pub mod webrtc {
@@ -145,3 +151,4 @@ pub mod sim {
 pub mod simnet {
     pub mod router;
 }
+
