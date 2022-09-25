@@ -51,6 +51,7 @@ subtle            = { version = "2.3.0"  }
 thiserror         = { version = "1.0.20" }
 tokio             = { version = "1.13.0", features = ["rt-multi-thread", "time"] }
 x25519-dalek      = { version = "1.1"    }
+env_logger        = { version = "0.8.1" }
 
 # Optional, needed by the 'sim' feature
 rand_chacha = { version = "0.2", optional = true }
