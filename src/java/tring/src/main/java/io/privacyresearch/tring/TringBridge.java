@@ -23,7 +23,7 @@ public class TringBridge {
             NativeLibLoader.loadLibrary();
             tringlib_h.initRingRTC();
             nativeSupport = true;
-        } catch (IOException ex) {
+        } catch (Throwable ex) {
             Logger.getLogger(TringBridge.class.getName()).log(Level.SEVERE, null, ex);
         }
         System.err.println("TringBridge init done, native support = "+nativeSupport);

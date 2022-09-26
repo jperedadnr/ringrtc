@@ -141,10 +141,10 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
     elif [ $DEFAULT_PLATFORM = "linux" ]
     then
         mkdir -p ../java/build/linux
-        cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/libringrtc.so ../java/tring/src/main/resources/libringrtc.so
+        cp -f target/${BUILD_TYPE}/libringrtc.so ../java/tring/src/main/resources/libringrtc.so
         cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/libringrtc.so ../java/build/linux/libringrtc-"${TARGET_ARCH}".java
     fi
-    ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/linux --output ../java/tring/src/main/java --source -t io.privacyresearch.tring -l ringrtc tringlib.h
+    ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/linux --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
     cd ../java/tring
     mvn clean install
 )
