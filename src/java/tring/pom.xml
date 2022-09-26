@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.privacyresearch</groupId>
     <artifactId>tring</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -18,7 +18,7 @@
                 <version>3.8.1</version>
                 <configuration>
                     <compilerArgs>
-			--enable-preview
+			<arg>--enable-preview</arg>
 		    </compilerArgs>
                 </configuration>
             </plugin>
