@@ -2,9 +2,13 @@ package io.privacyresearch.tring;
 
 import java.lang.foreign.Addressable;
 import java.lang.foreign.MemoryAddress;
+import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.MemorySession;
 import java.lang.foreign.ValueLayout;
+import static java.lang.foreign.ValueLayout.ADDRESS;
+import java.lang.invoke.VarHandle;
+import java.util.ArrayList;
 import java.util.List;
 
 public class TringBridge {
@@ -89,11 +93,55 @@ public class TringBridge {
         return answer;
     }
     
+    static byte[] fromJArrayByte(MemorySession ms, MemorySegment jArrayByte) {
+        int len = (int)JArrayByte.len$get(jArrayByte);
+        MemorySegment dataSegment = JArrayByte.data$slice(jArrayByte).asSlice(0, len);
+        byte[] destArr = new byte[len];
+        MemorySegment dstSeq = MemorySegment.ofArray(destArr);
+        dstSeq.copyFrom(dataSegment);
+        return destArr;
+    }
+
     static byte[] fromJByteArray(MemorySession ms, MemorySegment jByteArray) {
         long len = JByteArray.len$get(jByteArray);
+        System.err.println("Need to read byte array with "+len+" bytes");
+        for (int j = 0; j < 16; j++) {
+            byte b = jByteArray.get(ValueLayout.JAVA_BYTE, j);
+            System.err.println("b["+j+"] = "+b);
+        }
+       //VarHandle buffHandle = JByteArray.$struct$LAYOUT.varHandle(long.class, MemoryLayout.PathElement.groupElement("buff"));
+
         MemoryAddress pointer = JByteArray.buff$get(jByteArray);
-        MemorySegment byteSegment = JByteArray.ofAddress(pointer, ms);
-        byte[] data = byteSegment.toArray(ValueLayout.JAVA_BYTE);
+        System.err.println("pointer at "+ pointer.address());
+MemorySegment segment = MemorySegment.ofAddress(pointer, len, ms);
+byte[] destArr = new byte[(int)len];
+        MemorySegment dstSeq = MemorySegment.ofArray(destArr);
+        dstSeq.copyFrom(segment);
+        System.err.println("After copy, destArr = "+java.util.Arrays.toString(destArr));
+        
+        
+        
+        for (int j = 0; j < len; j++) {
+            byte b = segment.get(ValueLayout.JAVA_BYTE, j);
+            System.err.println("Bb[" + j + "] = " + b);
+
+        }
+
+
+   //     MemoryAddress pointer = ptr.get(ValueLayout.ADDRESS, 0);
+        System.err.println("ptr = "+pointer+", val = " + pointer.toRawLongValue());
+        System.err.println("ptr address = "+pointer.address());
+        byte[] data = new byte[(int)len];
+        for (int i =0; i < data.length; i++) {
+            data[i] = pointer.get(ValueLayout.JAVA_BYTE, i);
+        }
+        System.err.println("got data: "+java.util.Arrays.toString(data));
+        byte p0 = pointer.address().get(ValueLayout.JAVA_BYTE, 0);
+        byte p1 = pointer.address().get(ValueLayout.JAVA_BYTE, 1);
+        byte p8 = pointer.address().get(ValueLayout.JAVA_BYTE, 8);
+        System.err.println("p0 = "+p0+", p1 = "+p1+", p8 = "+p8);
+//        MemorySegment byteSegment = JByteArray.ofAddress(pointer, ms);
+//        byte[] data = byteSegment.toArray(ValueLayout.JAVA_BYTE);
         return data;
     }
 
@@ -131,7 +179,7 @@ public class TringBridge {
         @Override
         public void apply(MemorySegment opaque) {
             System.err.println("TRINGBRIDGE, send answer!");
-            byte[] bytes = fromJByteArray(scope, opaque);
+            byte[] bytes = fromJArrayByte(scope, opaque);
             System.err.println("TRING, bytes to send = "+java.util.Arrays.toString(bytes));
             api.answerCallback(bytes);
             System.err.println("TRING, answer sent");
@@ -148,8 +196,38 @@ public class TringBridge {
     
     class IceUpdateCallbackImpl implements createCallEndpoint$iceUpdateCallback {
         @Override
-        public void apply(MemorySegment opaque) {
-            System.err.println("TRINGBRIDGE, iceUpdate!");
+        public void apply(MemorySegment icePack) {
+            long length = JArrayByte2D.len$get(icePack);
+             System.err.println("IcePack has "+length+ " ice updates, address at "+icePack);
+             List<byte[]> iceCandidates = new ArrayList<>();
+            MemorySegment allData = JArrayByte2D.data$slice(icePack);
+            long allSize = allData.byteSize();
+            System.err.println("All size = " + allSize);
+            for (int i = 0; i < length; i++) {
+                int rowLength = (int) JByteArray.len$get(allData, i);
+                MemoryAddress rowData = JByteArray.buff$get(allData, i);
+                System.err.println("Got length for " + i + ": " + rowLength);
+                byte[] rowBytes = new byte[rowLength];
+                MemorySegment destSegment = MemorySegment.ofArray(rowBytes);
+                MemorySegment rowSegment = MemorySegment.ofAddress(rowData, rowLength, scope);
+                destSegment.copyFrom(rowSegment);
+                System.err.println("ICbytes = " + java.util.Arrays.toString(rowBytes));
+                iceCandidates.add(rowBytes);
+            }
+            
+//                MemorySegment rows = JArrayByte2D.data$slice(icePack);
+//       //      MemorySegment rows = JArrayByte2D.buff$slice(icePack);
+//             for (int i = 0; i < length; i++) {
+//                 MemorySegment row = rows.asSlice(16*i, 16);
+//                 long bl = JArrayByte.len$get(row);
+//                 MemorySegment byteSegment = JArrayByte.data$slice(row);
+//                 byte[] rowByte = fromJArrayByte(scope, byteSegment);
+//                 iceCandidates.add(rowByte);
+//             }
+             api.iceUpdateCallback(iceCandidates);
+           //  waveCallManager.handleSendIceCandidates(activeCall, false, iceCandidates);
+            sendAck();
+            System.err.println("TRINGBRIDGE, iceUpdate done!");
            
         }
     }

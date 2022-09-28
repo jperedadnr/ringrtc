@@ -1,5 +1,6 @@
 use core::slice;
 use crate::core::signaling;
+use std::fmt;
 
 
 #[repr(C)]
@@ -16,18 +17,86 @@ impl JString {
         answer
     }
 }
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct JArrayByte {
+  pub len: usize,
+  pub data: [u8; 256],
+}
+
+impl JArrayByte {
+    pub fn new(vector: Vec<u8> ) -> Self {
+        let vlen = vector.len();
+        let mut vdata= [0; 256];
+        for i in 0..vlen {
+            vdata[i] = vector[i];
+        }
+        JArrayByte{len:vlen, data:vdata}
+    }   
+
+    pub fn empty() -> Self {
+        let data = [0;256];
+        JArrayByte{len: 0, data: data}
+    }   
+
+}
+
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct JArrayByte2D {
+    pub len: usize,
+    pub data: [JByteArray;25],
+}
+
+impl JArrayByte2D {
+    pub fn new(vector: Vec<signaling::IceCandidate>) -> Self {
+        let vlen = vector.len();
+        let mut myrows: [JByteArray; 25] = [JByteArray::empty(); 25];
+        for i in 0..25 {
+            if (i < vlen) {
+                myrows[i] = JByteArray::from_data(vector[i].opaque.as_ptr(), vector[i].opaque.len());
+            } else {
+                myrows[i] = JByteArray::new(Vec::new());
+            }
+        }
+
+/*
+        let mut myrows: [JArrayByte; 2] = [JArrayByte::empty(); 2];
+        for i in 0..2 {
+            if (i < vlen) {
+                myrows[i] = JArrayByte::new(vector[i].opaque.clone());
+            } else {
+                myrows[i] = JArrayByte::new(Vec::new());
+            }
+        }
+*/
+        JArrayByte2D {
+            len: vlen,
+            data: myrows,
+        }
+    }   
+}
+
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct JByteArray {
     len: usize,
-    buff: *mut u8,
+    pub buff: *const u8,
 }
 
+impl fmt::Display for JByteArray {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let address = &self.buff;
+        write!(f, "jByteArray with {} bytes at {:p}", self.len, self.buff)
+    }
+}
 
 impl JByteArray {
-    pub fn new(mut vector: Vec<u8>) -> Self {
-        let buffer = vector.as_mut_ptr();
+    pub fn new(vector: Vec<u8>) -> Self {
+        let slice = vector.as_slice();
+        let buffer = slice.as_ptr();
         JByteArray{len: vector.len(), buff: buffer}
     }
 
@@ -37,15 +106,13 @@ impl JByteArray {
     }
 
     pub fn empty() -> Self {
-        let bar = Vec::new().as_mut_ptr();
+        let bar = Vec::new().as_ptr();
         JByteArray{len: 0, buff: bar}
     }
 
-/*
-    pub fn from_data(data: *mut u8, len: usize) -> Self {
+    pub fn from_data(data: *const u8, len: usize) -> Self {
         JByteArray{len: len, buff: data}
     }
-*/
 
 }
 
@@ -57,7 +124,6 @@ pub struct JByteArray2D {
 }
 
 impl JByteArray2D {
-/*
     pub fn new(vector: Vec<signaling::IceCandidate>) -> Self {
         let vlen = vector.len();
         // let mut myrows = [Opaque::empty(); 25];
@@ -74,5 +140,4 @@ impl JByteArray2D {
             buff: myrows,
         }
     }   
-*/
 }

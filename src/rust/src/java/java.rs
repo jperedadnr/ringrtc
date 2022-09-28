@@ -13,7 +13,7 @@ use crate::core::group_call::{GroupId, SignalingMessageUrgency};
 use crate::core::signaling;
 use crate::core::util::{ptr_as_mut};
 
-use crate::java::jtypes::{JString,JByteArray,JByteArray2D};
+use crate::java::jtypes::{JString,JArrayByte,JByteArray,JArrayByte2D,JByteArray2D};
 
 use crate::lite::http;
 use crate::lite::sfu::{UserId};
@@ -99,16 +99,16 @@ pub enum Event {
 #[allow(non_snake_case)]
 struct EventReporter {
     pub statusCallback: unsafe extern "C" fn(CallId, u64, CallDirection, CallMediaType),
-    pub answerCallback: unsafe extern "C" fn(JByteArray),
-    pub iceUpdateCallback: unsafe extern "C" fn(JByteArray2D),
+    pub answerCallback: unsafe extern "C" fn(JArrayByte),
+    pub iceUpdateCallback: unsafe extern "C" fn(JArrayByte2D),
     sender: Sender<Event>,
     report: Arc<dyn Fn() + Send + Sync>,
 }
 
 impl EventReporter {
     fn new(statusCallback: extern "C" fn(CallId, u64, CallDirection, CallMediaType),
-           answerCallback: extern "C" fn(JByteArray),
-           iceUpdateCallback: extern "C" fn(JByteArray2D),
+           answerCallback: extern "C" fn(JArrayByte),
+           iceUpdateCallback: extern "C" fn(JArrayByte2D),
             sender: Sender<Event>, report: impl Fn() + Send + Sync + 'static) -> Self {
         Self {
             statusCallback,
@@ -126,20 +126,18 @@ impl EventReporter {
                 match signal {
                     signaling::Message::Answer(answer) => {
                         info!("[JV] SendSignaling ANSWER Event");
-                        let op = JByteArray::new(answer.opaque);
+                        let op = JArrayByte::new(answer.opaque);
                         unsafe {
                             (self.answerCallback)(op);
                         }
                     }
-/*
                     signaling::Message::Ice(ice) => {
                         info!("[JV] SendSignaling ICE Event");
-                        let icepack: JByteArray2D = JByteArray2D::new(ice.candidates);
+                        let icepack: JArrayByte2D = JArrayByte2D::new(ice.candidates);
                         unsafe {
                             (self.iceUpdateCallback)(icepack);
                         }
                     }
-*/
                     _ => {
                         info!("[JV] unknownSendSignalingEvent WHICH IS WHAT WE NEED TO FIX NOW!");
                     }
@@ -172,6 +170,7 @@ impl SignalingSender for EventReporter {
         receiver_device_id: Option<DeviceId>,
         msg: signaling::Message,
     ) -> Result<()> {
+info!("Need to send SIGNALING msg {:?}", msg);
         self.send(Event::SendSignaling(
             recipient_id.to_string(),
             receiver_device_id,
@@ -306,8 +305,8 @@ impl CallEndpoint {
     fn new<'a>(
         use_new_audio_device_module: bool,
         statusCallback: extern "C" fn(CallId, u64, CallDirection, CallMediaType),
-        answerCallback: extern "C" fn(JByteArray),
-        iceUpdateCallback: extern "C" fn(JByteArray2D),
+        answerCallback: extern "C" fn(JArrayByte),
+        iceUpdateCallback: extern "C" fn(JArrayByte2D),
     ) -> Result<Self> {
         // Relevant for both group calls and 1:1 calls
         let (events_sender, _events_receiver) = channel::<Event>();
@@ -411,8 +410,8 @@ pub unsafe extern "C" fn getVersion() -> i64 {
 
 fn create_call_endpoint(audio: bool, 
             statusCallback: extern "C" fn(CallId, u64, CallDirection, CallMediaType),
-            answerCallback: extern "C" fn(JByteArray),
-            iceUpdateCallback: extern "C" fn(JByteArray2D),
+            answerCallback: extern "C" fn(JArrayByte),
+            iceUpdateCallback: extern "C" fn(JArrayByte2D),
         ) -> Result<*mut CallEndpoint> {
     let call_endpoint = CallEndpoint::new(audio, statusCallback, answerCallback, iceUpdateCallback).unwrap();
     let call_endpoint_box = Box::new(call_endpoint);
@@ -421,8 +420,8 @@ fn create_call_endpoint(audio: bool,
 
 #[no_mangle]
 pub unsafe extern "C" fn createCallEndpoint(statusCallback: extern "C" fn(CallId, u64, CallDirection, CallMediaType),
-            answerCallback: extern "C" fn(JByteArray), 
-            iceUpdateCallback: extern "C" fn(JByteArray2D)) -> i64 {
+            answerCallback: extern "C" fn(JArrayByte), 
+            iceUpdateCallback: extern "C" fn(JArrayByte2D)) -> i64 {
     let answer: i64 = match create_call_endpoint(false, statusCallback, answerCallback, iceUpdateCallback) {
         Ok(v) => v as i64,
         Err(e) => {
