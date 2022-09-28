@@ -71,6 +71,10 @@ public class TringBridge {
         MemorySegment icePack = toJByteArray2D(scope, ice);
         tringlib_h.receivedIce(callEndpoint, callId, senderDeviceId, icePack);
     }
+    
+    public void acceptCall() {
+        tringlib_h.acceptCall(callEndpoint, activeCallId);
+    }
 
     static MemorySegment toJByteArray2D(MemorySession ms, List<byte[]> rows) {
         MemorySegment answer = JByteArray2D.allocate(ms);

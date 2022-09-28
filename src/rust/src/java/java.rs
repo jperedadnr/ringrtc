@@ -98,7 +98,7 @@ pub enum Event {
 #[repr(C)]
 #[allow(non_snake_case)]
 struct EventReporter {
-    pub statusCallback: unsafe extern "C" fn(CallId, u64, CallDirection, CallMediaType),
+    pub statusCallback: unsafe extern "C" fn(CallId, u64, i32, CallMediaType),
     pub answerCallback: unsafe extern "C" fn(JArrayByte),
     pub iceUpdateCallback: unsafe extern "C" fn(JArrayByte2D),
     sender: Sender<Event>,
@@ -106,7 +106,7 @@ struct EventReporter {
 }
 
 impl EventReporter {
-    fn new(statusCallback: extern "C" fn(CallId, u64, CallDirection, CallMediaType),
+    fn new(statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
            answerCallback: extern "C" fn(JArrayByte),
            iceUpdateCallback: extern "C" fn(JArrayByte2D),
             sender: Sender<Event>, report: impl Fn() + Send + Sync + 'static) -> Self {
@@ -145,8 +145,25 @@ impl EventReporter {
             }
             Event::CallState(_peer_id, call_id, CallState::Incoming(call_media_type)) => {
                 info!("[JV] CALLSTATEEVEMNT");
+                let direction = 0;
                 unsafe {
-                    (self.statusCallback)(call_id, 1,CallDirection::InComing, call_media_type);
+                    (self.statusCallback)(call_id, 1,direction, call_media_type);
+                }
+            }
+            Event::CallState(_peer_id, call_id, state) => {
+                info!("[JV] CallState changed");
+                let (state_string, state_index) = match state {
+                    CallState::Ringing => ("ringing", 1),
+                    CallState::Connected => ("connected", 2),
+                    CallState::Connecting => ("connecting", 3),
+                    CallState::Concluded => ("Concluded", 4),
+                    CallState::Incoming(_) => ("incoming", 5),
+                    CallState::Outgoing(_) => ("outgoing", 6),
+                    CallState::Ended(_) => ("ended", 7),
+                };
+                info!("New state = {} and index = {}", state_string, state_index);
+                unsafe {
+                    (self.statusCallback)(call_id, 1, 10*state_index, CallMediaType::Audio);
                 }
             }
             _ => {
@@ -304,7 +321,7 @@ pub struct CallEndpoint {
 impl CallEndpoint {
     fn new<'a>(
         use_new_audio_device_module: bool,
-        statusCallback: extern "C" fn(CallId, u64, CallDirection, CallMediaType),
+        statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
         answerCallback: extern "C" fn(JArrayByte),
         iceUpdateCallback: extern "C" fn(JArrayByte2D),
     ) -> Result<Self> {
@@ -409,7 +426,7 @@ pub unsafe extern "C" fn getVersion() -> i64 {
 }
 
 fn create_call_endpoint(audio: bool, 
-            statusCallback: extern "C" fn(CallId, u64, CallDirection, CallMediaType),
+            statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
             answerCallback: extern "C" fn(JArrayByte),
             iceUpdateCallback: extern "C" fn(JArrayByte2D),
         ) -> Result<*mut CallEndpoint> {
@@ -419,7 +436,7 @@ fn create_call_endpoint(audio: bool,
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn createCallEndpoint(statusCallback: extern "C" fn(CallId, u64, CallDirection, CallMediaType),
+pub unsafe extern "C" fn createCallEndpoint(statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
             answerCallback: extern "C" fn(JArrayByte), 
             iceUpdateCallback: extern "C" fn(JArrayByte2D)) -> i64 {
     let answer: i64 = match create_call_endpoint(false, statusCallback, answerCallback, iceUpdateCallback) {
