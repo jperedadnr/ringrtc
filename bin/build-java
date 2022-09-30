@@ -146,5 +146,5 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
     fi
     ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/linux --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
     cd ../java/tring
-    mvn clean install
+    mvn -Dclassifier=$DEFAULT_PLATFORM clean install
 )
