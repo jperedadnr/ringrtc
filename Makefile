@@ -128,6 +128,7 @@ clean:
 	$(Q) ./bin/build-gctc --clean
 	$(Q) ./bin/build-electron --clean
 	$(Q) ./bin/build-ios --clean
+	$(Q) ./bin/build-java --clean
 	$(Q) rm -rf ./src/webrtc/src/out
 
 PHONY += distclean

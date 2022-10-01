@@ -35,6 +35,7 @@ clean()
     rm -rf ./src/rust/target/release
     rm -rf ./src/webrtc/src/out/debug
     rm -rf ./src/webrtc/src/out/release
+    mvn -f ./src/java/tring clean
 }
 
 BUILD_TYPE=release
