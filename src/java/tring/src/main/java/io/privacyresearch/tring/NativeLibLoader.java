@@ -9,7 +9,8 @@ import java.nio.file.StandardCopyOption;
 public class NativeLibLoader {
 
     public static void loadLibrary() throws IOException {
-        String libName = System.mapLibraryName("ringrtc");
+        String libName = "/"+System.mapLibraryName("ringrtc");
+        System.err.println("Will try to load "+libName);
         InputStream is = NativeLibLoader.class.getResourceAsStream(libName);
         Path target = Files.createTempFile("", "");
         Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING);
