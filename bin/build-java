@@ -10,9 +10,14 @@ set -e
 # shellcheck source=bin/env.sh
 . "$(dirname "$0")"/env.sh
 
-JEXTRACT=/opt/jextract-19
-JDK=/opt/jdk-19
+JEXTRACT=${JEXTRACT:-/opt/jextract-19}
+JDK=${JDK:-/opt/jdk-19}
 TARGET_ARCH=${TARGET_ARCH:-x64}
+
+# darwin only
+DEFAULT_MACOS_SDK_VERSION="12.3"
+MACOS_SDK_VERSION=${MACOS_SDK_VERSION:-$DEFAULT_MACOS_SDK_VERSION}
+MACOS_SDK_PATH="/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOS_SDK_VERSION}.sdk"
 
 usage()
 {
@@ -100,7 +105,7 @@ case "$(rustup show active-toolchain)" in
         exit 1
 esac
 
-echo "Building for platform ${DEFAULT_PLATFORM}, TARGET_ARCH=${TARGET_ARCH}, GN_ARCH=${GN_ARCH}, CARGO_TARGET=${CARGO_TARGET}"
+echo "Building for platform ${DEFAULT_PLATFORM}, TARGET_ARCH=${TARGET_ARCH}, GN_ARCH=${GN_ARCH}, CARGO_TARGET=${CARGO_TARGET}", OUTPUT_DIR=${OUTPUT_DIR}
 
 export MACOSX_DEPLOYMENT_TARGET="10.10"
 
@@ -127,24 +132,26 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
     then
         RUSTFLAGS="${RUSTFLAGS_WIN}" OUTPUT_DIR="${OUTPUT_DIR}" cargo build --target ${CARGO_TARGET} --features java
     else
-        OUTPUT_DIR="${OUTPUT_DIR}" cargo build --lib --features java --release
+        OUTPUT_DIR="${OUTPUT_DIR}" cargo build --target ${CARGO_TARGET} --lib --features java --release
     fi
 
     if [ $DEFAULT_PLATFORM = "darwin" ]
     then
         mkdir -p ../java/build/darwin
         cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/libringrtc.dylib ../java/build/darwin/libringrtc-"${TARGET_ARCH}".java
+        ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/darwin -I${MACOS_SDK_PATH}/usr/include --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
     elif [ $DEFAULT_PLATFORM = "win32" ]
     then
         mkdir -p ../java/build/win32
         cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/ringrtc.dll ../java/build/win32/libringrtc-"${TARGET_ARCH}".java
+        ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/win32 --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
     elif [ $DEFAULT_PLATFORM = "linux" ]
     then
         mkdir -p ../java/build/linux
         cp -f target/${BUILD_TYPE}/libringrtc.so ../java/tring/src/main/resources/libringrtc.so
         cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/libringrtc.so ../java/build/linux/libringrtc-"${TARGET_ARCH}".java
+        ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/linux --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
     fi
-    ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/linux --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
     cd ../java/tring
     mvn -Dclassifier=$DEFAULT_PLATFORM clean install
 )

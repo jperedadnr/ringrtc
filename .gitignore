@@ -14,3 +14,5 @@ src/jar.list
 .project
 .classpath
 org.eclipse.buildship.core.prefs
+src/java/build
+src/java/tring/target
