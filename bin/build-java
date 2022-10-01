@@ -135,6 +135,7 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
         OUTPUT_DIR="${OUTPUT_DIR}" cargo build --target ${CARGO_TARGET} --lib --features java --release
     fi
 
+    mkdir -p ../java/tring/src/main/resources
     if [ $DEFAULT_PLATFORM = "darwin" ]
     then
         mkdir -p ../java/build/darwin
