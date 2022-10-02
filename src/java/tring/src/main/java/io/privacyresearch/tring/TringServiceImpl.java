@@ -9,6 +9,7 @@ import java.lang.foreign.MemorySession;
 import java.lang.foreign.ValueLayout;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class TringServiceImpl implements TringService {
 
@@ -22,6 +23,8 @@ public class TringServiceImpl implements TringService {
     private long activeCallId;
     static String libName = "unknown";
     
+    private static final Logger LOG = Logger.getLogger(TringServiceImpl.class.getName());
+
     static {
         try {
             libName = NativeLibLoader.loadLibrary();
@@ -69,6 +72,7 @@ public class TringServiceImpl implements TringService {
         int mediaType = 0;
         long ageSec = 0;
         this.activeCallId = callId;
+        LOG.info("Pass received offer to tringlib");
         tringlib_h.receivedOffer(callEndpoint, toJString(scope, peerId), callId, mediaType, senderDeviceId,
                 receiverDeviceId, toJByteArray(scope, senderKey), toJByteArray(scope, receiverKey),
                 toJByteArray(scope, opaque),
@@ -92,6 +96,11 @@ public class TringServiceImpl implements TringService {
 
     @Override
     public void acceptCall() {
+        LOG.info("Set audioInput to 0");
+        tringlib_h.setAudioInput(callEndpoint, (short)0);
+        LOG.info("Set audiorecording");
+        tringlib_h.setOutgoingAudioEnabled(callEndpoint, true);
+        LOG.info("And now accept the call");
         tringlib_h.acceptCall(callEndpoint, activeCallId);
     }
 

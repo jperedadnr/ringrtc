@@ -137,12 +137,14 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
     fi
 
     mkdir -p ../java/tring/src/main/resources
+    ARCH_CLASSIFIER=""
     if [ $DEFAULT_PLATFORM = "darwin" ]
     then
         mkdir -p ../java/build/darwin
         cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/libringrtc.dylib ../java/tring/src/main/resources/libringrtc.dylib
         # cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/libringrtc.dylib ../java/build/darwin/libringrtc-"${TARGET_ARCH}"
         ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/darwin -I${MACOS_SDK_PATH}/usr/include --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
+        ARCH_CLASSIFIER="x86_64"
     elif [ $DEFAULT_PLATFORM = "win32" ]
     then
         mkdir -p ../java/build/win32
@@ -156,5 +158,5 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
         ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/linux --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
     fi
     cd ../java/tring
-    mvn -Dclassifier=$DEFAULT_PLATFORM clean install
+    mvn -Dclassifier=$DEFAULT_PLATFORM-$ARCH_CLASSIFIER clean install
 )

@@ -315,7 +315,7 @@ pub struct CallEndpoint {
     outgoing_video_track: VideoTrack,
     // Boxed so we can pass it as a Box<dyn VideoSink>
     incoming_video_sink: Box<LastFramesVideoSink>,
-
+    peer_connection_factory: PeerConnectionFactory,
 }
 
 impl CallEndpoint {
@@ -372,6 +372,7 @@ impl CallEndpoint {
             outgoing_video_source,
             outgoing_video_track,
             incoming_video_sink,
+            peer_connection_factory,
         })
     }
 }
@@ -541,10 +542,10 @@ pub unsafe extern "C" fn receivedIce(endpoint: i64, call_id: u64, sender_device_
     );
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn acceptCall(endpoint: i64, call_id: u64) -> i64 {
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    info!("now accept call");
     let call_id = CallId::from(call_id);
     endpoint.call_manager.accept_call(call_id);
     573 
@@ -556,6 +557,22 @@ pub unsafe extern "C" fn signalMessageSent(endpoint: i64, call_id: CallId) -> i6
     info!("Received signalmessagesent, endpoint = {:?}", endpoint);
     callendpoint.call_manager.message_sent(call_id);
     135 
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn setAudioInput(endpoint: i64, index: u16) -> i64 {
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    info!("Have to set audio_recordig_device to {}", index);
+    endpoint.peer_connection_factory.set_audio_recording_device(index);
+    1
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn setOutgoingAudioEnabled(endpoint: i64, enable: bool) -> i64 {
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    info!("Have to set outgoing audio enabled to {}", enable);
+    endpoint.outgoing_audio_track.set_enabled(enable);
+    1
 }
 
 
