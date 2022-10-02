@@ -1,42 +1,57 @@
 package io.privacyresearch.tring;
 
+import io.privacyresearch.tringapi.TringApi;
+import io.privacyresearch.tringapi.TringService;
 import java.lang.foreign.Addressable;
 import java.lang.foreign.MemoryAddress;
-import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.MemorySession;
 import java.lang.foreign.ValueLayout;
-import static java.lang.foreign.ValueLayout.ADDRESS;
-import java.lang.invoke.VarHandle;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TringBridge {
+public class TringServiceImpl implements TringService {
 
+    private static final TringService instance = new TringServiceImpl();
     private static boolean nativeSupport = false;
     private static long nativeVersion = 0;
 
     private MemorySession scope;
     private long callEndpoint;
-    private final TringApi api;
+    private io.privacyresearch.tringapi.TringApi api;
     private long activeCallId;
+    static String libName = "unknown";
     
     static {
         try {
-            NativeLibLoader.loadLibrary();
+            libName = NativeLibLoader.loadLibrary();
             nativeSupport = true;
             nativeVersion = tringlib_h.getVersion();
+            
         } catch (Throwable ex) {
             System.err.println("No native RingRTC support: ");
             ex.printStackTrace();
         }
     }
     
+    public static TringService provider() {
+        return instance;
+    }
+    
+    public String getVersionInfo() {
+        return "TringServiceImpl using "+libName;
+    }
+
     public static long getNativeVersion() {
         return nativeVersion;
     }
+    
+    protected TringServiceImpl() {
+        
+    }
 
-    public TringBridge(TringApi api) {
+    @Override
+    public void setApi(io.privacyresearch.tringapi.TringApi api) {
         this.api = api;
         initiate();
     }
@@ -48,6 +63,7 @@ public class TringBridge {
                 createAnswerCallback(), createIceUpdateCallback());
     }
 
+    @Override
     public void receivedOffer(String peerId, long callId, int senderDeviceId, int receiverDeviceId,
             byte[] senderKey, byte[] receiverKey, byte[] opaque) {
         int mediaType = 0;
@@ -62,16 +78,19 @@ public class TringBridge {
     public void setSelfUuid(String uuid) {
         tringlib_h.setSelfUuid(callEndpoint, toJString(scope, uuid));
     }
-    
+
+    @Override
     public void proceed(long callId) {
         tringlib_h.proceedCall(callEndpoint, callId, 0, 0);
     }
-    
+
+    @Override
     public void receivedIce(long callId, int senderDeviceId, List<byte[]> ice) {
         MemorySegment icePack = toJByteArray2D(scope, ice);
         tringlib_h.receivedIce(callEndpoint, callId, senderDeviceId, icePack);
     }
-    
+
+    @Override
     public void acceptCall() {
         tringlib_h.acceptCall(callEndpoint, activeCallId);
     }
@@ -164,7 +183,8 @@ byte[] destArr = new byte[(int)len];
         MemorySegment seg = createCallEndpoint$statusCallback.allocate(sci, scope);
         return seg.address();
     }
-    
+
+
     class StatusCallbackImpl implements createCallEndpoint$statusCallback {
         @Override
         public void apply(MemorySegment callId, long _x1, int direction, int type) {

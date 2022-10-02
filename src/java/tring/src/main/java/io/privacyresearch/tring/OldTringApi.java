@@ -6,7 +6,8 @@ import java.util.List;
  *
  * @author johan
  */
-public interface TringApi {
+@Deprecated
+public interface OldTringApi {
     
     void statusCallback(long callId, long peerId, int dir, int type);
     

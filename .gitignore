@@ -16,3 +16,4 @@ src/jar.list
 org.eclipse.buildship.core.prefs
 src/java/build
 src/java/tring/target
+/src/java/tringapi/target/
