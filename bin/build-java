@@ -137,7 +137,6 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
     fi
 
     mkdir -p ../java/tring/src/main/resources
-    ARCH_CLASSIFIER=""
     if [ $DEFAULT_PLATFORM = "darwin" ]
     then
         mkdir -p ../java/build/darwin
@@ -158,5 +157,5 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
         ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/linux --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
     fi
     cd ../java/tring
-    mvn -Dclassifier=$DEFAULT_PLATFORM-$ARCH_CLASSIFIER clean install
+    mvn -Dclassifier=$DEFAULT_PLATFORM-$CARGO_ARCH clean install
 )
