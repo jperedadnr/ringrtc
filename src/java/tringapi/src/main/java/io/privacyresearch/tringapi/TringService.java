@@ -15,6 +15,8 @@ public interface TringService {
     public void setApi(TringApi api);
 
     public void acceptCall();
+    public void ignoreCall();
+    public void hangupCall();
 
     public void proceed(long callId);
 

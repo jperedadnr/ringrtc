@@ -104,6 +104,18 @@ public class TringServiceImpl implements TringService {
         tringlib_h.acceptCall(callEndpoint, activeCallId);
     }
 
+    @Override
+    public void ignoreCall() {
+        LOG.info("Ignore the call");
+        tringlib_h.ignoreCall(callEndpoint, activeCallId);
+    }
+
+    @Override
+    public void hangupCall() {
+        LOG.info("Hangup the call");
+        tringlib_h.hangupCall(callEndpoint);
+    }
+
     static MemorySegment toJByteArray2D(MemorySession ms, List<byte[]> rows) {
         MemorySegment answer = JByteArray2D.allocate(ms);
         JByteArray2D.len$set(answer, rows.size());

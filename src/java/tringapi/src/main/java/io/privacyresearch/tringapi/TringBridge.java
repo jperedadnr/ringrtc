@@ -42,6 +42,14 @@ public class TringBridge {
         service.acceptCall();
     }
 
+    public void ignoreCall() {
+        service.ignoreCall();
+    }
+
+    public void hangupCall() {
+        service.hangupCall();
+    }
+
     public void proceed(long callId) {
         service.proceed(callId);
     }

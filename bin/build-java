@@ -156,6 +156,8 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
         #cp -f target/${CARGO_TARGET}/${BUILD_TYPE}/libringrtc.so ../java/build/linux/libringrtc-"${TARGET_ARCH}".java
         ${JEXTRACT}/bin/jextract -I${JDK}include -I${JDK}/include/linux --output ../java/tring/src/main/java --source -t io.privacyresearch.tring tringlib.h
     fi
-    cd ../java/tring
+    cd ../java/tringapi
+    mvn clean install
+    cd ../tring
     mvn -Dclassifier=$DEFAULT_PLATFORM-$CARGO_ARCH clean install
 )

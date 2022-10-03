@@ -552,6 +552,23 @@ pub unsafe extern "C" fn acceptCall(endpoint: i64, call_id: u64) -> i64 {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn ignoreCall(endpoint: i64, call_id: u64) -> i64 {
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    info!("now drop (ignore) call");
+    let call_id = CallId::from(call_id);
+    endpoint.call_manager.drop_call(call_id);
+    1
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn hangupCall(endpoint: i64) -> i64 {
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    info!("now hangup call");
+    endpoint.call_manager.hangup();
+    1
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn signalMessageSent(endpoint: i64, call_id: CallId) -> i64 {
     let callendpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     info!("Received signalmessagesent, endpoint = {:?}", endpoint);
