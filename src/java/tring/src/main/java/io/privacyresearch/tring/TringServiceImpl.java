@@ -9,6 +9,7 @@ import java.lang.foreign.MemorySession;
 import java.lang.foreign.ValueLayout;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Logger;
 
 public class TringServiceImpl implements TringService {
@@ -63,7 +64,7 @@ public class TringServiceImpl implements TringService {
         scope = MemorySession.openShared();
         tringlib_h.initRingRTC(toJString(scope, "Hello from Java"));
         this.callEndpoint = tringlib_h.createCallEndpoint(createStatusCallback(), 
-                createAnswerCallback(), createIceUpdateCallback());
+                createAnswerCallback(), createOfferCallback(), createIceUpdateCallback());
     }
 
     @Override
@@ -79,6 +80,18 @@ public class TringServiceImpl implements TringService {
                 ageSec);
     }
 
+    @Override
+    public void receivedAnswer(String peerId, long callId, int senderDeviceId,
+            byte[] senderKey, byte[] receiverKey, byte[] opaque) {
+        int mediaType = 0;
+        long ageSec = 0;
+        this.activeCallId = callId;
+        LOG.info("Pass received offer to tringlib");
+        tringlib_h.receivedAnswer(callEndpoint, toJString(scope, peerId), callId, senderDeviceId,
+                toJByteArray(scope, senderKey), toJByteArray(scope, receiverKey),
+                toJByteArray(scope, opaque)
+                );
+    }
     public void setSelfUuid(String uuid) {
         tringlib_h.setSelfUuid(callEndpoint, toJString(scope, uuid));
     }
@@ -114,6 +127,19 @@ public class TringServiceImpl implements TringService {
     public void hangupCall() {
         LOG.info("Hangup the call");
         tringlib_h.hangupCall(callEndpoint);
+    }
+    
+    /**
+     * start a call and return the call_id
+     * @return a generated call_id
+     */
+    @Override
+    public long startOutgoingCall(long callId, String peerId, int localDeviceId) {
+        LOG.info("Tring will start outgoing call to "+peerId+" with localDevice "+localDeviceId);
+        tringlib_h.setAudioInput(callEndpoint, (short)0);
+        tringlib_h.setAudioOutput(callEndpoint, (short)0);
+        tringlib_h.createOutgoingCall(callEndpoint, toJString(scope, peerId), false, localDeviceId, callId);
+        return callId;
     }
 
     static MemorySegment toJByteArray2D(MemorySession ms, List<byte[]> rows) {
@@ -233,6 +259,23 @@ byte[] destArr = new byte[(int)len];
         }
     }
     
+    Addressable createOfferCallback() {
+        OfferCallbackImpl sci = new OfferCallbackImpl();
+        MemorySegment seg = createCallEndpoint$offerCallback.allocate(sci, scope);
+        return seg.address();
+    }
+
+    class OfferCallbackImpl implements createCallEndpoint$offerCallback {
+        @Override
+        public void apply(MemorySegment opaque) {
+            byte[] bytes = fromJArrayByte(scope, opaque);
+            api.offerCallback(bytes);
+            System.err.println("TRING, offer sent");
+            sendAck();
+            System.err.println("TRING, ack sent");
+        }
+    }
+
     Addressable createIceUpdateCallback() {
         IceUpdateCallbackImpl sci = new IceUpdateCallbackImpl();
         MemorySegment seg = createCallEndpoint$iceUpdateCallback.allocate(sci, scope);
@@ -243,8 +286,8 @@ byte[] destArr = new byte[(int)len];
         @Override
         public void apply(MemorySegment icePack) {
             long length = JArrayByte2D.len$get(icePack);
-             System.err.println("IcePack has "+length+ " ice updates, address at "+icePack);
-             List<byte[]> iceCandidates = new ArrayList<>();
+            System.err.println("IcePack has "+length+ " ice updates, address at "+icePack);
+            List<byte[]> iceCandidates = new ArrayList<>();
             MemorySegment allData = JArrayByte2D.data$slice(icePack);
             long allSize = allData.byteSize();
             System.err.println("All size = " + allSize);
@@ -259,18 +302,7 @@ byte[] destArr = new byte[(int)len];
                 System.err.println("ICbytes = " + java.util.Arrays.toString(rowBytes));
                 iceCandidates.add(rowBytes);
             }
-            
-//                MemorySegment rows = JArrayByte2D.data$slice(icePack);
-//       //      MemorySegment rows = JArrayByte2D.buff$slice(icePack);
-//             for (int i = 0; i < length; i++) {
-//                 MemorySegment row = rows.asSlice(16*i, 16);
-//                 long bl = JArrayByte.len$get(row);
-//                 MemorySegment byteSegment = JArrayByte.data$slice(row);
-//                 byte[] rowByte = fromJArrayByte(scope, byteSegment);
-//                 iceCandidates.add(rowByte);
-//             }
-             api.iceUpdateCallback(iceCandidates);
-           //  waveCallManager.handleSendIceCandidates(activeCall, false, iceCandidates);
+            api.iceUpdateCallback(iceCandidates);
             sendAck();
             System.err.println("TRINGBRIDGE, iceUpdate done!");
            

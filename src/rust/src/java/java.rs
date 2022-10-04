@@ -100,6 +100,7 @@ pub enum Event {
 struct EventReporter {
     pub statusCallback: unsafe extern "C" fn(CallId, u64, i32, CallMediaType),
     pub answerCallback: unsafe extern "C" fn(JArrayByte),
+    pub offerCallback: unsafe extern "C" fn(JArrayByte),
     pub iceUpdateCallback: unsafe extern "C" fn(JArrayByte2D),
     sender: Sender<Event>,
     report: Arc<dyn Fn() + Send + Sync>,
@@ -108,11 +109,13 @@ struct EventReporter {
 impl EventReporter {
     fn new(statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
            answerCallback: extern "C" fn(JArrayByte),
+           offerCallback: extern "C" fn(JArrayByte),
            iceUpdateCallback: extern "C" fn(JArrayByte2D),
             sender: Sender<Event>, report: impl Fn() + Send + Sync + 'static) -> Self {
         Self {
             statusCallback,
             answerCallback,
+            offerCallback,
             iceUpdateCallback,
             sender,
             report: Arc::new(report),
@@ -124,6 +127,13 @@ impl EventReporter {
             Event::SendSignaling(_peer_id, _maybe_device_id, _call_id, signal) => {
                 info!("[JV] SendSignalingEvent");
                 match signal {
+                    signaling::Message::Offer(offer) => {
+                        info!("[JV] SendSignaling OFFER Event");
+                        let op = JArrayByte::new(offer.opaque);
+                        unsafe {
+                            (self.offerCallback)(op);
+                        }
+                    }
                     signaling::Message::Answer(answer) => {
                         info!("[JV] SendSignaling ANSWER Event");
                         let op = JArrayByte::new(answer.opaque);
@@ -146,6 +156,13 @@ impl EventReporter {
             Event::CallState(_peer_id, call_id, CallState::Incoming(call_media_type)) => {
                 info!("[JV] CALLSTATEEVEMNT");
                 let direction = 0;
+                unsafe {
+                    (self.statusCallback)(call_id, 1,direction, call_media_type);
+                }
+            }
+            Event::CallState(_peer_id, call_id, CallState::Outgoing(call_media_type)) => {
+                info!("[JV] CALLSTATEEVEMNT");
+                let direction = 1;
                 unsafe {
                     (self.statusCallback)(call_id, 1,direction, call_media_type);
                 }
@@ -323,6 +340,7 @@ impl CallEndpoint {
         use_new_audio_device_module: bool,
         statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
         answerCallback: extern "C" fn(JArrayByte),
+        offerCallback: extern "C" fn(JArrayByte),
         iceUpdateCallback: extern "C" fn(JArrayByte2D),
     ) -> Result<Self> {
         // Relevant for both group calls and 1:1 calls
@@ -341,8 +359,7 @@ impl CallEndpoint {
 
         let event_reported = Arc::new(AtomicBool::new(false));
 
-        // let event_reporter = EventReporter::new(startCallback, answerCallback, iceUpdateCallback, events_sender, move || {
-        let event_reporter = EventReporter::new(statusCallback, answerCallback, iceUpdateCallback, events_sender, move || {
+        let event_reporter = EventReporter::new(statusCallback, answerCallback, offerCallback, iceUpdateCallback, events_sender, move || {
             info!("[JV] EVENT_REPORTER, NYI");
             if event_reported.swap(true, std::sync::atomic::Ordering::Relaxed) {
                 return;
@@ -426,21 +443,17 @@ pub unsafe extern "C" fn getVersion() -> i64 {
     1
 }
 
-fn create_call_endpoint(audio: bool, 
-            statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
-            answerCallback: extern "C" fn(JArrayByte),
-            iceUpdateCallback: extern "C" fn(JArrayByte2D),
-        ) -> Result<*mut CallEndpoint> {
-    let call_endpoint = CallEndpoint::new(audio, statusCallback, answerCallback, iceUpdateCallback).unwrap();
-    let call_endpoint_box = Box::new(call_endpoint);
-    Ok(Box::into_raw(call_endpoint_box))
-}
 
 #[no_mangle]
 pub unsafe extern "C" fn createCallEndpoint(statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
             answerCallback: extern "C" fn(JArrayByte), 
+            offerCallback: extern "C" fn(JArrayByte), 
             iceUpdateCallback: extern "C" fn(JArrayByte2D)) -> i64 {
-    let answer: i64 = match create_call_endpoint(false, statusCallback, answerCallback, iceUpdateCallback) {
+    let call_endpoint = CallEndpoint::new(false, statusCallback, answerCallback, offerCallback, iceUpdateCallback).unwrap();
+    let call_endpoint_box = Box::new(call_endpoint);
+    let boxx: Result<*mut CallEndpoint> = Ok(Box::into_raw(call_endpoint_box));
+
+    let answer: i64 = match boxx { 
         Ok(v) => v as i64,
         Err(e) => {
             info!("Error creating callEndpoint: {}", e); 
@@ -487,9 +500,47 @@ pub unsafe extern "C" fn receivedOffer(endpoint: i64, peerId: JString, call_id: 
                 receiver_identity_key: receiver_key.to_vec_u8(),
             },
         );
-
-
     1   
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn receivedAnswer(endpoint: i64, peerId: JString, call_id: u64,
+        sender_device_id:u32, sender_key: JByteArray, receiver_key: JByteArray, opaque: JByteArray) -> i64 {
+    let callendpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    let peer_id = JString::from(peerId);
+    let call_id = CallId::new(call_id);
+    let answer = signaling::Answer::new(opaque.to_vec_u8()).unwrap();
+    callendpoint.call_manager.received_answer(
+            call_id,
+            signaling::ReceivedAnswer {
+                answer,
+                sender_device_id,
+                sender_identity_key: sender_key.to_vec_u8(),
+                receiver_identity_key: receiver_key.to_vec_u8(),
+            },
+        );
+    1   
+}
+
+// suppy a random callid
+#[no_mangle]
+pub unsafe extern "C" fn createOutgoingCall(endpoint: i64, peer_id: JString, video_enabled: bool, local_device_id:u32, call_id: i64) -> i64 {
+    info!("create outgoing call");
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    let peer_id = peer_id.to_string();
+    let media_type = if video_enabled {
+        CallMediaType::Video
+    } else {
+        CallMediaType::Audio
+    };
+    let call_id = CallId::from(call_id);
+    endpoint.call_manager.create_outgoing_call(
+            peer_id,
+            call_id,
+            media_type,
+            local_device_id,
+        );
+    1
 }
 
 #[no_mangle]
@@ -581,6 +632,14 @@ pub unsafe extern "C" fn setAudioInput(endpoint: i64, index: u16) -> i64 {
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     info!("Have to set audio_recordig_device to {}", index);
     endpoint.peer_connection_factory.set_audio_recording_device(index);
+    1
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn setAudioOutput(endpoint: i64, index: u16) -> i64 {
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    info!("Have to set audio_output_device to {}", index);
+    endpoint.peer_connection_factory.set_audio_playout_device(index);
     1
 }
 

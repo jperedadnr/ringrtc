@@ -12,5 +12,8 @@ public interface TringApi {
     
     void answerCallback(byte[] opaque);
 
+    void offerCallback(byte[] opaque);
+
     void iceUpdateCallback(List<byte[]> iceCandidates);
+
 }

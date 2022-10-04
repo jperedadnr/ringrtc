@@ -24,6 +24,10 @@ public interface TringService {
 
     public void receivedOffer(String peerId, long callId, int senderDeviceId, int receiverDeviceId,
             byte[] senderKey, byte[] receiverKey, byte[] opaque);
+
+    public void receivedAnswer(String peerId, long callId, int senderDeviceId,
+            byte[] senderKey, byte[] receiverKey, byte[] opaque);
+    public long startOutgoingCall(long callId, String peerId, int localDeviceId);
     
     public default String getVersionInfo() {
         return "Unresolved TringService";
