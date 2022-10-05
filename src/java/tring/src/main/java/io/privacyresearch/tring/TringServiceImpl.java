@@ -294,7 +294,13 @@ byte[] destArr = new byte[(int)len];
             for (int i = 0; i < length; i++) {
                 int rowLength = (int) JByteArray.len$get(allData, i);
                 MemoryAddress rowData = JByteArray.buff$get(allData, i);
-                System.err.println("Got length for " + i + ": " + rowLength);
+                long rawRowAddress = rowData.toRawLongValue();
+                System.err.println("Got length for " + i + ": " + rowLength+", raw address at "+rawRowAddress);
+                byte b0 = rowData.get(ValueLayout.JAVA_BYTE, 0);
+                byte b1 = rowData.get(ValueLayout.JAVA_BYTE, 1);
+                byte b2 = rowData.get(ValueLayout.JAVA_BYTE, 2);
+                byte b3 = rowData.get(ValueLayout.JAVA_BYTE, 3);
+                System.err.println("b0 = " + b0 + ", b1 = " + b1 + ", b2 = " + b2+", b3 = " + b3);
                 byte[] rowBytes = new byte[rowLength];
                 MemorySegment destSegment = MemorySegment.ofArray(rowBytes);
                 MemorySegment rowSegment = MemorySegment.ofAddress(rowData, rowLength, scope);
