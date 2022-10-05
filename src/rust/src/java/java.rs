@@ -101,7 +101,7 @@ struct EventReporter {
     pub statusCallback: unsafe extern "C" fn(CallId, u64, i32, CallMediaType),
     pub answerCallback: unsafe extern "C" fn(JArrayByte),
     pub offerCallback: unsafe extern "C" fn(JArrayByte),
-    pub iceUpdateCallback: unsafe extern "C" fn(JArrayByte2D),
+    pub iceUpdateCallback: unsafe extern "C" fn(JArrayByte),
     sender: Sender<Event>,
     report: Arc<dyn Fn() + Send + Sync>,
 }
@@ -110,7 +110,7 @@ impl EventReporter {
     fn new(statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
            answerCallback: extern "C" fn(JArrayByte),
            offerCallback: extern "C" fn(JArrayByte),
-           iceUpdateCallback: extern "C" fn(JArrayByte2D),
+           iceUpdateCallback: extern "C" fn(JArrayByte),
             sender: Sender<Event>, report: impl Fn() + Send + Sync + 'static) -> Self {
         Self {
             statusCallback,
@@ -143,9 +143,13 @@ impl EventReporter {
                     }
                     signaling::Message::Ice(ice) => {
                         info!("[JV] SendSignaling ICE Event");
-                        let icepack: JArrayByte2D = JArrayByte2D::new(ice.candidates);
+let ilen = ice.candidates.len();
+                        // let icepack: JArrayByte2D = JArrayByte2D::new(ice.candidates);
                         unsafe {
-                            (self.iceUpdateCallback)(icepack);
+for i in 0..ilen {
+                            // (self.iceUpdateCallback)(icepack);
+                            (self.iceUpdateCallback)(JArrayByte::new(ice.candidates[i].opaque.clone()));
+}
                         }
                     }
                     _ => {
@@ -341,7 +345,7 @@ impl CallEndpoint {
         statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
         answerCallback: extern "C" fn(JArrayByte),
         offerCallback: extern "C" fn(JArrayByte),
-        iceUpdateCallback: extern "C" fn(JArrayByte2D),
+        iceUpdateCallback: extern "C" fn(JArrayByte),
     ) -> Result<Self> {
         // Relevant for both group calls and 1:1 calls
         let (events_sender, _events_receiver) = channel::<Event>();
@@ -448,7 +452,7 @@ pub unsafe extern "C" fn getVersion() -> i64 {
 pub unsafe extern "C" fn createCallEndpoint(statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
             answerCallback: extern "C" fn(JArrayByte), 
             offerCallback: extern "C" fn(JArrayByte), 
-            iceUpdateCallback: extern "C" fn(JArrayByte2D)) -> i64 {
+            iceUpdateCallback: extern "C" fn(JArrayByte)) -> i64 {
     let call_endpoint = CallEndpoint::new(false, statusCallback, answerCallback, offerCallback, iceUpdateCallback).unwrap();
     let call_endpoint_box = Box::new(call_endpoint);
     let boxx: Result<*mut CallEndpoint> = Ok(Box::into_raw(call_endpoint_box));

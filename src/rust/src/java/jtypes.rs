@@ -24,6 +24,11 @@ pub struct JArrayByte {
   pub data: [u8; 256],
 }
 
+impl fmt::Display for JArrayByte {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "JArrayByte with {} bytes at {:?}", self.len, &(self.data))
+    }
+}
 impl JArrayByte {
     pub fn new(vector: Vec<u8> ) -> Self {
         let vlen = vector.len();
@@ -46,27 +51,30 @@ impl JArrayByte {
 #[derive(Debug)]
 pub struct JArrayByte2D {
     pub len: usize,
-    pub data: [JByteArray;25],
+    pub data: [u8; 256],
+    // pub data: [JArrayByte;25],
 }
 
 impl JArrayByte2D {
     pub fn new(vector: Vec<signaling::IceCandidate>) -> Self {
 info!("I have to create a jArrayByte with {} elements" , vector.len());
         let vlen = vector.len();
-        let mut myrows: [JByteArray; 25] = [JByteArray::empty(); 25];
+        let mut myrows: [JArrayByte; 25] = [JArrayByte::empty(); 25];
         for i in 0..25 {
             if (i < vlen) {
-                myrows[i] = JByteArray::from_data(vector[i].opaque.as_ptr(), vector[i].opaque.len());
+                myrows[i] = JArrayByte::new(vector[i].opaque.clone());
+                // myrows[i] = JByteArray::from_data(vector[i].opaque.as_ptr(), vector[i].opaque.len());
 info!("IceVec[{}] = {:?}", i, vector[i].opaque);
             } else {
-                myrows[i] = JByteArray::new(Vec::new());
+                // myrows[i] = JByteArray::new(Vec::new());
+                myrows[i] = JArrayByte::new(Vec::new());
             }
 info!("Myrow[{}] : {}", i, myrows[i]);
         }
 info!("data at {:?}", myrows);
         JArrayByte2D {
             len: vlen,
-            data: myrows,
+            data: [1;256]
         }
     }   
 }
