@@ -11,23 +11,22 @@ use crate::core::call_manager::CallManager;
 use crate::core::group_call;
 use crate::core::group_call::{GroupId, SignalingMessageUrgency};
 use crate::core::signaling;
-use crate::core::util::{ptr_as_mut};
+use crate::core::util::ptr_as_mut;
 
-use crate::java::jtypes::{JString,JArrayByte,JByteArray,JArrayByte2D,JByteArray2D};
+use crate::java::jtypes::{JArrayByte, JArrayByte2D, JByteArray, JByteArray2D, JString};
 
 use crate::lite::http;
-use crate::lite::sfu::{UserId};
-use crate::native::{CallState,CallStateHandler,GroupUpdate,GroupUpdateHandler,NativeCallContext,NativePlatform,PeerId,SignalingSender,};
-use crate::webrtc::logging;
-use crate::webrtc::media::{
-    AudioTrack, VideoFrame, VideoSink, VideoSource, VideoTrack,
+use crate::lite::sfu::UserId;
+use crate::native::{
+    CallState, CallStateHandler, GroupUpdate, GroupUpdateHandler, NativeCallContext,
+    NativePlatform, PeerId, SignalingSender,
 };
+use crate::webrtc::logging;
+use crate::webrtc::media::{AudioTrack, VideoFrame, VideoSink, VideoSource, VideoTrack};
 
 use crate::webrtc::peer_connection::AudioLevel;
 
-use crate::webrtc::peer_connection_factory::{
-    self as pcf, IceServer, PeerConnectionFactory
-};
+use crate::webrtc::peer_connection_factory::{self as pcf, IceServer, PeerConnectionFactory};
 use crate::webrtc::peer_connection_observer::NetworkRoute;
 
 fn init_logging() {
@@ -107,11 +106,14 @@ struct EventReporter {
 }
 
 impl EventReporter {
-    fn new(statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
-           answerCallback: extern "C" fn(JArrayByte),
-           offerCallback: extern "C" fn(JArrayByte),
-           iceUpdateCallback: extern "C" fn(JArrayByte),
-            sender: Sender<Event>, report: impl Fn() + Send + Sync + 'static) -> Self {
+    fn new(
+        statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
+        answerCallback: extern "C" fn(JArrayByte),
+        offerCallback: extern "C" fn(JArrayByte),
+        iceUpdateCallback: extern "C" fn(JArrayByte),
+        sender: Sender<Event>,
+        report: impl Fn() + Send + Sync + 'static,
+    ) -> Self {
         Self {
             statusCallback,
             answerCallback,
@@ -123,7 +125,7 @@ impl EventReporter {
     }
 
     fn send(&self, event: Event) -> Result<()> {
-        match event  {
+        match event {
             Event::SendSignaling(_peer_id, _maybe_device_id, _call_id, signal) => {
                 info!("[JV] SendSignalingEvent");
                 match signal {
@@ -146,7 +148,9 @@ impl EventReporter {
                         let ilen = ice.candidates.len();
                         unsafe {
                             for i in 0..ilen {
-                                (self.iceUpdateCallback)(JArrayByte::new(ice.candidates[i].opaque.clone()));
+                                (self.iceUpdateCallback)(JArrayByte::new(
+                                    ice.candidates[i].opaque.clone(),
+                                ));
                             }
                         }
                     }
@@ -159,14 +163,14 @@ impl EventReporter {
                 info!("[JV] CALLSTATEEVEMNT");
                 let direction = 0;
                 unsafe {
-                    (self.statusCallback)(call_id, 1,direction, call_media_type);
+                    (self.statusCallback)(call_id, 1, direction, call_media_type);
                 }
             }
             Event::CallState(_peer_id, call_id, CallState::Outgoing(call_media_type)) => {
                 info!("[JV] CALLSTATEEVEMNT");
                 let direction = 1;
                 unsafe {
-                    (self.statusCallback)(call_id, 1,direction, call_media_type);
+                    (self.statusCallback)(call_id, 1, direction, call_media_type);
                 }
             }
             Event::CallState(_peer_id, call_id, state) => {
@@ -182,7 +186,7 @@ impl EventReporter {
                 };
                 info!("New state = {} and index = {}", state_string, state_index);
                 unsafe {
-                    (self.statusCallback)(call_id, 1, 10*state_index, CallMediaType::Audio);
+                    (self.statusCallback)(call_id, 1, 10 * state_index, CallMediaType::Audio);
                 }
             }
             _ => {
@@ -206,7 +210,7 @@ impl SignalingSender for EventReporter {
         receiver_device_id: Option<DeviceId>,
         msg: signaling::Message,
     ) -> Result<()> {
-info!("Need to send SIGNALING msg {:?}", msg);
+        info!("Need to send SIGNALING msg {:?}", msg);
         self.send(Event::SendSignaling(
             recipient_id.to_string(),
             receiver_device_id,
@@ -252,7 +256,7 @@ impl CallStateHandler for EventReporter {
         call_id: CallId,
         call_state: CallState,
     ) -> Result<()> {
-info!("[JV] CallStatehandler, invoke self.send");
+        info!("[JV] CallStatehandler, invoke self.send");
 
         self.send(Event::CallState(
             remote_peer_id.to_string(),
@@ -304,7 +308,6 @@ info!("[JV] CallStatehandler, invoke self.send");
         Ok(())
     }
 }
-
 
 impl http::Delegate for EventReporter {
     fn send_request(&self, request_id: u32, request: http::Request) {
@@ -361,12 +364,19 @@ impl CallEndpoint {
 
         let event_reported = Arc::new(AtomicBool::new(false));
 
-        let event_reporter = EventReporter::new(statusCallback, answerCallback, offerCallback, iceUpdateCallback, events_sender, move || {
-            info!("[JV] EVENT_REPORTER, NYI");
-            if event_reported.swap(true, std::sync::atomic::Ordering::Relaxed) {
-                return;
-            }
-        });
+        let event_reporter = EventReporter::new(
+            statusCallback,
+            answerCallback,
+            offerCallback,
+            iceUpdateCallback,
+            events_sender,
+            move || {
+                info!("[JV] EVENT_REPORTER, NYI");
+                if event_reported.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                    return;
+                }
+            },
+        );
         // Only relevant for 1:1 calls
         let signaling_sender = Box::new(event_reporter.clone());
         let should_assume_messages_sent = false; // Use async notification from app to send next message.
@@ -427,17 +437,16 @@ impl LastFramesVideoSink {
     }
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn initRingRTC(ts: JString) -> i64 {
     println!("Initialize RingRTC, init logging");
     init_logging();
     println!("Initialize RingRTC, init logging done");
-println!("Ready to print {:?}", ts);
+    println!("Ready to print {:?}", ts);
     let txt = ts.to_string();
     info!("Got text: {}", txt);
     info!("Initialized RingRTC, using logging");
-    1   
+    1
 }
 
 #[no_mangle]
@@ -445,23 +454,31 @@ pub unsafe extern "C" fn getVersion() -> i64 {
     1
 }
 
-
 #[no_mangle]
-pub unsafe extern "C" fn createCallEndpoint(statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
-            answerCallback: extern "C" fn(JArrayByte), 
-            offerCallback: extern "C" fn(JArrayByte), 
-            iceUpdateCallback: extern "C" fn(JArrayByte)) -> i64 {
-    let call_endpoint = CallEndpoint::new(false, statusCallback, answerCallback, offerCallback, iceUpdateCallback).unwrap();
+pub unsafe extern "C" fn createCallEndpoint(
+    statusCallback: extern "C" fn(CallId, u64, i32, CallMediaType),
+    answerCallback: extern "C" fn(JArrayByte),
+    offerCallback: extern "C" fn(JArrayByte),
+    iceUpdateCallback: extern "C" fn(JArrayByte),
+) -> i64 {
+    let call_endpoint = CallEndpoint::new(
+        false,
+        statusCallback,
+        answerCallback,
+        offerCallback,
+        iceUpdateCallback,
+    )
+    .unwrap();
     let call_endpoint_box = Box::new(call_endpoint);
     let boxx: Result<*mut CallEndpoint> = Ok(Box::into_raw(call_endpoint_box));
 
-    let answer: i64 = match boxx { 
+    let answer: i64 = match boxx {
         Ok(v) => v as i64,
         Err(e) => {
-            info!("Error creating callEndpoint: {}", e); 
+            info!("Error creating callEndpoint: {}", e);
             0
         }
-    };  
+    };
     info!("[tring] CallEndpoint created at {}", answer);
     answer
 }
@@ -477,9 +494,18 @@ pub unsafe extern "C" fn setSelfUuid(endpoint: i64, ts: JString) -> i64 {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn receivedOffer(endpoint: i64, peerId: JString, call_id: u64,
-        offer_type:i32, sender_device_id:u32, receiver_device_id:u32,
-        sender_key: JByteArray, receiver_key: JByteArray, opaque: JByteArray, age_sec: u64) -> i64 {
+pub unsafe extern "C" fn receivedOffer(
+    endpoint: i64,
+    peerId: JString,
+    call_id: u64,
+    offer_type: i32,
+    sender_device_id: u32,
+    receiver_device_id: u32,
+    sender_key: JByteArray,
+    receiver_key: JByteArray,
+    opaque: JByteArray,
+    age_sec: u64,
+) -> i64 {
     let callendpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     let peer_id = JString::from(peerId);
     let call_id = CallId::new(call_id);
@@ -489,44 +515,57 @@ pub unsafe extern "C" fn receivedOffer(endpoint: i64, peerId: JString, call_id: 
     };
     let offer = signaling::Offer::new(call_media_type, opaque.to_vec_u8()).unwrap();
     callendpoint.call_manager.received_offer(
-            peer_id.to_string(),
-            call_id,
-            signaling::ReceivedOffer {
-                offer,
-                age: Duration::from_secs(age_sec),
-                sender_device_id,
-                receiver_device_id,
-                // A Java desktop client cannot be the primary device.
-                receiver_device_is_primary: false,
-                sender_identity_key: sender_key.to_vec_u8(),
-                receiver_identity_key: receiver_key.to_vec_u8(),
-            },
-        );
-    1   
+        peer_id.to_string(),
+        call_id,
+        signaling::ReceivedOffer {
+            offer,
+            age: Duration::from_secs(age_sec),
+            sender_device_id,
+            receiver_device_id,
+            // A Java desktop client cannot be the primary device.
+            receiver_device_is_primary: false,
+            sender_identity_key: sender_key.to_vec_u8(),
+            receiver_identity_key: receiver_key.to_vec_u8(),
+        },
+    );
+    1
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn receivedAnswer(endpoint: i64, peerId: JString, call_id: u64,
-        sender_device_id:u32, sender_key: JByteArray, receiver_key: JByteArray, opaque: JByteArray) -> i64 {
+pub unsafe extern "C" fn receivedAnswer(
+    endpoint: i64,
+    peerId: JString,
+    call_id: u64,
+    sender_device_id: u32,
+    sender_key: JByteArray,
+    receiver_key: JByteArray,
+    opaque: JByteArray,
+) -> i64 {
     let callendpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     let peer_id = JString::from(peerId);
     let call_id = CallId::new(call_id);
     let answer = signaling::Answer::new(opaque.to_vec_u8()).unwrap();
     callendpoint.call_manager.received_answer(
-            call_id,
-            signaling::ReceivedAnswer {
-                answer,
-                sender_device_id,
-                sender_identity_key: sender_key.to_vec_u8(),
-                receiver_identity_key: receiver_key.to_vec_u8(),
-            },
-        );
-    1   
+        call_id,
+        signaling::ReceivedAnswer {
+            answer,
+            sender_device_id,
+            sender_identity_key: sender_key.to_vec_u8(),
+            receiver_identity_key: receiver_key.to_vec_u8(),
+        },
+    );
+    1
 }
 
 // suppy a random callid
 #[no_mangle]
-pub unsafe extern "C" fn createOutgoingCall(endpoint: i64, peer_id: JString, video_enabled: bool, local_device_id:u32, call_id: i64) -> i64 {
+pub unsafe extern "C" fn createOutgoingCall(
+    endpoint: i64,
+    peer_id: JString,
+    video_enabled: bool,
+    local_device_id: u32,
+    call_id: i64,
+) -> i64 {
     info!("create outgoing call");
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     let peer_id = peer_id.to_string();
@@ -536,17 +575,19 @@ pub unsafe extern "C" fn createOutgoingCall(endpoint: i64, peer_id: JString, vid
         CallMediaType::Audio
     };
     let call_id = CallId::from(call_id);
-    endpoint.call_manager.create_outgoing_call(
-            peer_id,
-            call_id,
-            media_type,
-            local_device_id,
-        );
+    endpoint
+        .call_manager
+        .create_outgoing_call(peer_id, call_id, media_type, local_device_id);
     1
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn proceedCall(endpoint: i64, call_id: u64, bandwidth_mode: i32, audio_levels_interval_millis:i32) -> i64 {
+pub unsafe extern "C" fn proceedCall(
+    endpoint: i64,
+    call_id: u64,
+    bandwidth_mode: i32,
+    audio_levels_interval_millis: i32,
+) -> i64 {
     info!("Proceeding with call");
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     let call_id = CallId::from(call_id);
@@ -567,14 +608,20 @@ pub unsafe extern "C" fn proceedCall(endpoint: i64, call_id: u64, bandwidth_mode
         call_id,
         context,
         BandwidthMode::from_i32(bandwidth_mode),
-        audio_levels_interval);
+        audio_levels_interval,
+    );
 
     147
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn receivedIce(endpoint: i64, call_id: u64, sender_device_id: DeviceId, icepack: JByteArray2D) {
-    info!("JavaRing, received_ice with length = {}", icepack.len );
+pub unsafe extern "C" fn receivedIce(
+    endpoint: i64,
+    call_id: u64,
+    sender_device_id: DeviceId,
+    icepack: JByteArray2D,
+) {
+    info!("JavaRing, received_ice with length = {}", icepack.len);
     let callendpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     info!("Received offer, endpoint = {:?}", endpoint);
     let call_id = CallId::from(call_id);
@@ -583,7 +630,7 @@ pub unsafe extern "C" fn receivedIce(endpoint: i64, call_id: u64, sender_device_
         let row = &icepack.buff[j];
         let opaque = row.to_vec_u8();
         ice_candidates.push(signaling::IceCandidate::new(opaque));
-    }   
+    }
     callendpoint.call_manager.received_ice(
         call_id,
         signaling::ReceivedIce {
@@ -601,7 +648,7 @@ pub unsafe extern "C" fn acceptCall(endpoint: i64, call_id: u64) -> i64 {
     info!("now accept call");
     let call_id = CallId::from(call_id);
     endpoint.call_manager.accept_call(call_id);
-    573 
+    573
 }
 
 #[no_mangle]
@@ -626,14 +673,16 @@ pub unsafe extern "C" fn signalMessageSent(endpoint: i64, call_id: CallId) -> i6
     let callendpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     info!("Received signalmessagesent, endpoint = {:?}", endpoint);
     callendpoint.call_manager.message_sent(call_id);
-    135 
+    135
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn setAudioInput(endpoint: i64, index: u16) -> i64 {
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     info!("Have to set audio_recordig_device to {}", index);
-    endpoint.peer_connection_factory.set_audio_recording_device(index);
+    endpoint
+        .peer_connection_factory
+        .set_audio_recording_device(index);
     1
 }
 
@@ -641,7 +690,9 @@ pub unsafe extern "C" fn setAudioInput(endpoint: i64, index: u16) -> i64 {
 pub unsafe extern "C" fn setAudioOutput(endpoint: i64, index: u16) -> i64 {
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     info!("Have to set audio_output_device to {}", index);
-    endpoint.peer_connection_factory.set_audio_playout_device(index);
+    endpoint
+        .peer_connection_factory
+        .set_audio_playout_device(index);
     1
 }
 
@@ -652,5 +703,3 @@ pub unsafe extern "C" fn setOutgoingAudioEnabled(endpoint: i64, enable: bool) ->
     endpoint.outgoing_audio_track.set_enabled(enable);
     1
 }
-
-
