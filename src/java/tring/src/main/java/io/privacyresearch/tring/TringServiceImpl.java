@@ -38,6 +38,11 @@ public class TringServiceImpl implements TringService {
         }
     }
     
+
+    public TringServiceImpl() {
+        // no-op
+    }
+
     public static TringService provider() {
         return instance;
     }
@@ -50,10 +55,6 @@ public class TringServiceImpl implements TringService {
         return nativeVersion;
     }
     
-    protected TringServiceImpl() {
-        
-    }
-
     @Override
     public void setApi(io.privacyresearch.tringapi.TringApi api) {
         this.api = api;
