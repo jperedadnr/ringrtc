@@ -86,12 +86,12 @@ public class TringServiceImpl implements TringService {
         int mediaType = 0;
         long ageSec = 0;
         this.activeCallId = callId;
-        LOG.info("Pass received offer to tringlib");
+        LOG.info("Pass received answer to tringlib");
         tringlib_h.receivedAnswer(callEndpoint, toJString(scope, peerId), callId, senderDeviceId,
                 toJByteArray(scope, senderKey), toJByteArray(scope, receiverKey),
-                toJByteArray(scope, opaque)
-                );
+                toJByteArray(scope, opaque));
     }
+
     public void setSelfUuid(String uuid) {
         tringlib_h.setSelfUuid(callEndpoint, toJString(scope, uuid));
     }
@@ -128,10 +128,10 @@ public class TringServiceImpl implements TringService {
         LOG.info("Hangup the call");
         tringlib_h.hangupCall(callEndpoint);
     }
-    
+
     /**
      * start a call and return the call_id
-     * @return a generated call_id
+     * @return the same call_id as the one we were passed, if success
      */
     @Override
     public long startOutgoingCall(long callId, String peerId, int localDeviceId) {
@@ -281,46 +281,18 @@ byte[] destArr = new byte[(int)len];
         MemorySegment seg = createCallEndpoint$iceUpdateCallback.allocate(sci, scope);
         return seg.address();
     }
-    
+
     class IceUpdateCallbackImpl implements createCallEndpoint$iceUpdateCallback {
+
         @Override
         public void apply(MemorySegment icePack) {
-                        byte[] bytes = fromJArrayByte(scope, icePack);
- List<byte[]> iceCandidates = new ArrayList<>();
- iceCandidates.add(bytes);
-            
-//            long length = JArrayByte2D.len$get(icePack);
-//            System.err.println("IcePack has "+length+ " ice updates, address at "+icePack);
-//            List<byte[]> iceCandidates = new ArrayList<>();
-//            MemorySegment allData = JArrayByte2D.data$slice(icePack);
-//            long allSize = allData.byteSize();
-//            System.err.println("All size = " + allSize);
-//            for (int i = 0; i < length; i++) {
-//                MemorySegment slice = allData.asSlice(8+264*i, 264);
-//                byte[] rowBytes = fromJArrayByte(scope, slice);
-//                
-//                int rowLenght = (int) JArrayByte.len$get(slice);
-//                JArrayByte.
-//                int rowLength = (int) JByteArray.len$get(allData, i);
-//                MemoryAddress rowData = JByteArray.buff$get(allData, i);
-//                long rawRowAddress = rowData.toRawLongValue();
-//                System.err.println("Got length for " + i + ": " + rowLength+", raw address at "+rawRowAddress);
-//                byte b0 = rowData.get(ValueLayout.JAVA_BYTE, 0);
-//                byte b1 = rowData.get(ValueLayout.JAVA_BYTE, 1);
-//                byte b2 = rowData.get(ValueLayout.JAVA_BYTE, 2);
-//                byte b3 = rowData.get(ValueLayout.JAVA_BYTE, 3);
-//                System.err.println("b0 = " + b0 + ", b1 = " + b1 + ", b2 = " + b2+", b3 = " + b3);
-//                byte[] rowBytes = new byte[rowLength];
-//                MemorySegment destSegment = MemorySegment.ofArray(rowBytes);
-//                MemorySegment rowSegment = MemorySegment.ofAddress(rowData, rowLength, scope);
-//                destSegment.copyFrom(rowSegment);
-//                System.err.println("ICbytes = " + java.util.Arrays.toString(rowBytes));
-//                iceCandidates.add(rowBytes);
-//            }
+            byte[] bytes = fromJArrayByte(scope, icePack);
+            List<byte[]> iceCandidates = new ArrayList<>();
+            iceCandidates.add(bytes);
+
             api.iceUpdateCallback(iceCandidates);
             sendAck();
-            System.err.println("TRINGBRIDGE, iceUpdate done!");
-           
+            LOG.info("iceUpdate done!");
         }
     }
 

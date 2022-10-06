@@ -57,21 +57,21 @@ pub struct JArrayByte2D {
 
 impl JArrayByte2D {
     pub fn new(vector: Vec<signaling::IceCandidate>) -> Self {
-info!("I have to create a jArrayByte with {} elements" , vector.len());
+        info!("I have to create a jArrayByte with {} elements" , vector.len());
         let vlen = vector.len();
         let mut myrows: [JArrayByte; 25] = [JArrayByte::empty(); 25];
         for i in 0..25 {
             if (i < vlen) {
                 myrows[i] = JArrayByte::new(vector[i].opaque.clone());
                 // myrows[i] = JByteArray::from_data(vector[i].opaque.as_ptr(), vector[i].opaque.len());
-info!("IceVec[{}] = {:?}", i, vector[i].opaque);
+                info!("IceVec[{}] = {:?}", i, vector[i].opaque);
             } else {
                 // myrows[i] = JByteArray::new(Vec::new());
                 myrows[i] = JArrayByte::new(Vec::new());
             }
-info!("Myrow[{}] : {}", i, myrows[i]);
+            info!("Myrow[{}] : {}", i, myrows[i]);
         }
-info!("data at {:?}", myrows);
+        info!("data at {:?}", myrows);
         JArrayByte2D {
             len: vlen,
             data: [1;256]

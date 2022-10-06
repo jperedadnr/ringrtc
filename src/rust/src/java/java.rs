@@ -143,13 +143,11 @@ impl EventReporter {
                     }
                     signaling::Message::Ice(ice) => {
                         info!("[JV] SendSignaling ICE Event");
-let ilen = ice.candidates.len();
-                        // let icepack: JArrayByte2D = JArrayByte2D::new(ice.candidates);
+                        let ilen = ice.candidates.len();
                         unsafe {
-for i in 0..ilen {
-                            // (self.iceUpdateCallback)(icepack);
-                            (self.iceUpdateCallback)(JArrayByte::new(ice.candidates[i].opaque.clone()));
-}
+                            for i in 0..ilen {
+                                (self.iceUpdateCallback)(JArrayByte::new(ice.candidates[i].opaque.clone()));
+                            }
                         }
                     }
                     _ => {
@@ -475,7 +473,7 @@ pub unsafe extern "C" fn setSelfUuid(endpoint: i64, ts: JString) -> i64 {
     let uuid = txt.into_bytes();
     let callendpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     callendpoint.call_manager.set_self_uuid(uuid);
-    1   
+    1
 }
 
 #[no_mangle]
