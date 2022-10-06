@@ -24,11 +24,11 @@ fn main() {
     if cfg!(feature = "java") {
         let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
         cbindgen::Builder::new()
-          .with_crate(crate_dir)
-          .with_language(cbindgen::Language::C)
-          .generate()
-          .expect("unable to generate bindings")
-          .write_to_file("tringlib.h");
+            .with_crate(crate_dir)
+            .with_language(cbindgen::Language::C)
+            .generate()
+            .expect("unable to generate bindings")
+            .write_to_file("tringlib.h");
     }
     let target = env::var("TARGET").unwrap();
     let profile = env::var("PROFILE").unwrap();

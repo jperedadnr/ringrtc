@@ -29,7 +29,7 @@ public class TringBridge {
         });
 
     }
-    
+
     public String getVersionInfo() {
         if (service == null) {
             return "No TringService registered";
@@ -61,6 +61,15 @@ public class TringBridge {
     public void receivedOffer(String peerId, long callId, int senderDeviceId, int receiverDeviceId,
             byte[] senderKey, byte[] receiverKey, byte[] opaque) {
         service.receivedOffer(peerId, callId, senderDeviceId, receiverDeviceId, senderKey, receiverKey, opaque);
+    }
+
+    public void receivedAnswer(String peerId, long callId, int receiverDeviceId,
+            byte[] senderKey, byte[] receiverKey, byte[] opaque) {
+        service.receivedAnswer(peerId, callId, receiverDeviceId, senderKey, receiverKey, opaque);
+    }
+
+    public long startOutgoingCall(long callId, String peerId, int localDeviceId) {
+        return service.startOutgoingCall(callId, peerId, localDeviceId);
     }
 
 }
