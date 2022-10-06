@@ -15,5 +15,8 @@ src/jar.list
 .classpath
 org.eclipse.buildship.core.prefs
 src/java/build
+src/java/tring/src/gen-sources
+src/java/tring/src/main/resources/libringrtc.dylib
 src/java/tring/target
-/src/java/tringapi/target/
+src/java/tringapi/target/
+src/rust/tringlib.h
