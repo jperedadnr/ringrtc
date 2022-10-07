@@ -587,11 +587,20 @@ pub unsafe extern "C" fn proceedCall(
     call_id: u64,
     bandwidth_mode: i32,
     audio_levels_interval_millis: i32,
+    ice_user: JString,
+    ice_pwd: JString,
+    icepack: JByteArray2D,
 ) -> i64 {
     info!("Proceeding with call");
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     let call_id = CallId::from(call_id);
-    let ice_server = IceServer::new(String::from("iceuser"), String::from("icepwd"), Vec::new());
+    let mut ice_candidates = Vec::new();
+    for j in 0..icepack.len {
+        let row = &icepack.buff[j];
+        let opaque = row.to_vec_u8();
+        ice_candidates.push(String::from_utf8(opaque).unwrap());
+    }
+    let ice_server = IceServer::new(ice_user.to_string(), ice_pwd.to_string(), ice_candidates);
     let context = NativeCallContext::new(
         false,
         ice_server,

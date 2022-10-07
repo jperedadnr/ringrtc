@@ -1,9 +1,11 @@
 package io.privacyresearch.tringapi;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
  /**
   * This class provides the access points for the application to interact with
@@ -50,8 +52,9 @@ public class TringBridge {
         service.hangupCall();
     }
 
-    public void proceed(long callId) {
-        service.proceed(callId);
+    public void proceed(long callId, String iceUser, String icePassword, List<String> ice) {
+        List<byte[]> iceb = ice.stream().map(s -> s.getBytes(StandardCharsets.UTF_8)).collect(Collectors.toList());
+        service.proceed(callId, iceUser, icePassword, iceb);
     }
 
     public void receivedIce(long callId, int senderDeviceId, List<byte[]> ice) {
