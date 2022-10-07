@@ -158,7 +158,12 @@ impl EventReporter {
                         let (hangup_type, hangup_device_id) = hangup.to_type_and_device_id();
                         info!("[JV] SendSignaling Hangup Event");
                         unsafe {
-                            (self.statusCallback)(call_id, hangup_device_id.unwrap().into(), 11, hangup_type as i32);
+                            (self.statusCallback)(
+                                call_id,
+                                hangup_device_id.unwrap().into(),
+                                11,
+                                hangup_type as i32,
+                            );
                         }
                     }
                     _ => {
