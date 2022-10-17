@@ -2,23 +2,27 @@ name: Build and publish snapshots
 on:
   push:
     branches: [ javabuild ]
+  pull_request:
+    branches: [ javabuild ]
 
 jobs:
   build:
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
+        os: [ windows-latest ]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
       with:
         ref: javabuild
+
     - name: Install latest bash on macOS
       if: runner.os == 'macOS'
       run: |
         brew update
         brew install bash
         brew install coreutils
+
     - name: Set environment variables
       run: |
         echo "OS=${RUNNER_OS,,}" >> $GITHUB_ENV
@@ -44,6 +48,7 @@ jobs:
         echo "PLATFORM=$platform" >> $GITHUB_ENV
         echo "CLASSIFIER=$classifier" >> $GITHUB_ENV
       shell: bash
+
     - name: Download OpenJDK 19
       id: download
       uses: oracle-actions/setup-java@v1
@@ -51,6 +56,7 @@ jobs:
         website: jdk.java.net
         release: 19
         install: false
+
     - name: Setup Java and Apache Maven
       uses: actions/setup-java@v3
       with:
@@ -60,6 +66,7 @@ jobs:
         server-id: gluon-nexus
         server-username: MAVEN_USERNAME
         server-password: MAVEN_CENTRAL_TOKEN
+
     - name: Checkout tools repo
       run: |
         echo "print env variables"
@@ -69,17 +76,40 @@ jobs:
         echo ${{ env.CLASSIFIER }}
         cd $GITHUB_WORKSPACE
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-    - name: Install rustup
+
+    - name: Install rustup (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        # Disable the download progress bar which can cause perf issues
+        $ProgressPreference = "SilentlyContinue"
+        Invoke-WebRequest https://win.rustup.rs/ -OutFile rustup-init.exe
+        .\rustup-init.exe -y --default-host=x86_64-pc-windows-msvc --profile=minimal
+        del rustup-init.exe
+      shell: powershell
+    - name: Install rustup (macOS/Linux)
+      if: runner.os != 'Windows'
       run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    - name: Download and extract JEXTRACT
+
+    - name: Download and extract JEXTRACT (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        $ProgressPreference = "SilentlyContinue"
+        Invoke-WebRequest https://download.java.net/java/early_access/jextract/2/openjdk-19-jextract+2-3_${{ env.OS }}-${{ env.ARCH }}_bin.tar.gz" -OutFile $RUNNER_TEMP/jextract.tar.gz
+        tar -xvzf $RUNNER_TEMP/jextract.tar.gz -C $GITHUB_WORKSPACE
+      shell: powershell
+    - name: Download and extract JEXTRACT (macOS/Linux)
+      if: runner.os != 'Windows'
       run: |
         download_url="https://download.java.net/java/early_access/jextract/2/openjdk-19-jextract+2-3_${{ env.OS }}-${{ env.ARCH }}_bin.tar.gz"
         wget -q --show-progress -O $RUNNER_TEMP/jextract.tar.gz $download_url
         tar -xvzf $RUNNER_TEMP/jextract.tar.gz -C $GITHUB_WORKSPACE
+
     - name: Build
       run: |
+        export DEPOT_TOOLS_WIN_TOOLCHAIN=0
         export PATH=$GITHUB_WORKSPACE/depot_tools/:$PATH
         make java PLATFORM=${{ env.PLATFORM }} JEXTRACT=$GITHUB_WORKSPACE/jextract-19 JDK=$JAVA_HOME TARGET_ARCH=${{ env.ARCH }} MACOS_SDK_VERSION=12.1
+
     - name: Deploy snapshot
       run: |
         cd src/java/tring
