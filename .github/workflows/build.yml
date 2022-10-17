@@ -78,7 +78,7 @@ jobs:
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
         if [[ ${{ runner.os }} == "Windows" ]]
         then
-           dir "$env:GITHUB_WORKSPACE\depot_tools\gclient.*"
+          dir $env:GITHUB_WORKSPACE + "\depot_tools\gclient.*"
         fi
       shell: bash
 
@@ -133,7 +133,7 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = 0
-        $env:PATH = "$env:GITHUB_WORKSPACE\depot_tools\;$env:GITHUB_WORKSPACE\make\bin\;" + $env:PATH
+        $env:PATH = $env:GITHUB_WORKSPACE + "\depot_tools\;" + $env:GITHUB_WORKSPACE + "\make\bin\;" + $env:PATH
         echo $env:PATH
         make java PLATFORM=${{ env.PLATFORM }} JEXTRACT=$env:GITHUB_WORKSPACE\jextract-19 JDK=$env:JAVA_HOME TARGET_ARCH=${{ env.ARCH }}
       shell: powershell
