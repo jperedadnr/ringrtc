@@ -78,6 +78,7 @@ jobs:
         if [[ ${{ runner.os }} == "Windows" ]]
         then
           dir
+          dir "depot_tools"
           dir "depot_tools\gclient.*"
         fi
       shell: bash
