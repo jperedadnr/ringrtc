@@ -80,6 +80,7 @@ jobs:
         then
            dir "$env:GITHUB_WORKSPACE\depot_tools\gclient.*"
         fi
+      shell: bash
 
     - name: Install rustup (Windows)
       if: runner.os == 'Windows'
