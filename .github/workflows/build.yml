@@ -102,7 +102,7 @@ jobs:
       run: |
         download_url="https://download.java.net/java/early_access/jextract/2/openjdk-19-jextract+2-3_${{ env.OS }}-${{ env.ARCH }}_bin.tar.gz"
         wget -q --show-progress -O $RUNNER_TEMP/jextract.tar.gz $download_url
-        tar -xvzf $RUNNER_TEMP/jextract.tar.gz -C $GITHUB_WORKSPACE
+        tar -xvzf $RUNNER_TEMP/jextract.tar.gz -C $env:GITHUB_WORKSPACE
 
     - name: Build
       run: |
