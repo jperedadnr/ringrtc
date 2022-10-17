@@ -123,7 +123,6 @@ jobs:
         Invoke-WebRequest https://www.python.org/ftp/python/2.7.18/python-2.7.18.amd64.msi -OutFile python27\python.msi
         msiexec.exe /i python27\python.msi /quiet
         del python27\python.msi
-        $env:PATH = $env:GITHUB_WORKSPACE + "\python\" + $env:PATH
       shell: powershell
 
     - name: Build (Windows)
@@ -131,6 +130,7 @@ jobs:
       run: |
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = 0
         $env:PATH = $env:GITHUB_WORKSPACE + "\depot_tools\" + $env:PATH
+        echo $env:PATH
         make java PLATFORM=${{ env.PLATFORM }} JEXTRACT=$env:GITHUB_WORKSPACE\jextract-19 JDK=$env:JAVA_HOME TARGET_ARCH=${{ env.ARCH }}
       shell: powershell
     - name: Build (macOS/Linux)
