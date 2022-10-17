@@ -74,11 +74,11 @@ jobs:
         echo ${{ env.ARCH }}
         echo ${{ env.PLATFORM }}
         echo ${{ env.CLASSIFIER }}
-        cd ${{ env.GITHUB_WORKSPACE }}
+        cd $GITHUB_WORKSPACE
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
         if [[ ${{ runner.os }} == "Windows" ]]
         then
-          dir $env:GITHUB_WORKSPACE + "\depot_tools\gclient.*"
+          dir "${{ github.workspace }}\depot_tools\gclient.*"
         fi
       shell: bash
 
