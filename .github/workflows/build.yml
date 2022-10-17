@@ -112,7 +112,6 @@ jobs:
         Invoke-WebRequest https://altushost-swe.dl.sourceforge.net/project/gnuwin32/make/3.81/make-3.81-bin.zip -OutFile make\make.zip
         7z x make\make.zip
         del make\make.zip
-        $env:PATH = $env:GITHUB_WORKSPACE + "\make\bin\" + $env:PATH
       shell: powershell
 
     - name: Install python (Windows)
@@ -129,7 +128,7 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = 0
-        $env:PATH = $env:GITHUB_WORKSPACE + "\depot_tools\" + $env:PATH
+        $env:PATH = $env:GITHUB_WORKSPACE + "\depot_tools\;" + $env:GITHUB_WORKSPACE + "\make\bin\;" + $env:PATH
         echo $env:PATH
         make java PLATFORM=${{ env.PLATFORM }} JEXTRACT=$env:GITHUB_WORKSPACE\jextract-19 JDK=$env:JAVA_HOME TARGET_ARCH=${{ env.ARCH }}
       shell: powershell
