@@ -75,13 +75,6 @@ jobs:
         echo ${{ env.PLATFORM }}
         echo ${{ env.CLASSIFIER }}
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
-        if [[ ${{ runner.os }} == "Windows" ]]
-        then
-          dir
-          dir "depot_tools"
-          dir "depot_tools\gclient.*"
-        fi
-      shell: bash
 
     - name: Install rustup (Windows)
       if: runner.os == 'Windows'
