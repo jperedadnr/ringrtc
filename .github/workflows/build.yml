@@ -52,8 +52,8 @@ jobs:
       uses: actions/setup-java@v3
       with:
         distribution: jdkfile
-        jdkFile: ${{ steps.download.outputs.archive }}
-        java-version: ${{ steps.download.outputs.version }}
+        jdkFile: jdk.zip
+        java-version: 19
         server-id: gluon-nexus
         server-username: MAVEN_USERNAME
         server-password: MAVEN_CENTRAL_TOKEN
