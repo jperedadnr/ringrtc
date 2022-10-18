@@ -25,28 +25,10 @@ jobs:
 
     - name: Set environment variables
       run: |
-        echo "OS=${RUNNER_OS,,}" >> $GITHUB_ENV
-        echo "ARCH=${RUNNER_ARCH,,}" >> $GITHUB_ENV
-        if [[ ${{ runner.os }} == "Linux" ]]
-        then
-          platform=unix
-          classifier=linux-x86_64
-        elif [[ ${{ runner.os }} == "macOS" ]]
-        then
-          platform=mac
-          if [[ ${{ runner.arch }} == "X64" ]]
-          then
-            classifier=darwin-x86_64
-          else
-            classifier=darwin-aarch64
-          fi
-        elif [[ ${{ runner.os }} == "Windows" ]]
-        then
-          platform=windows
-          classifier=win-x86_64
-        fi
-        echo "PLATFORM=$platform" >> $GITHUB_ENV
-        echo "CLASSIFIER=$classifier" >> $GITHUB_ENV
+        echo "OS=${RUNNER_OS,,}" >> $env:GITHUB_ENV
+        echo "ARCH=${RUNNER_ARCH,,}" >> $env:GITHUB_ENV
+        echo "PLATFORM=windows" >> $env:GITHUB_ENV
+        echo "CLASSIFIER=win-x86_64" >> $env:GITHUB_ENV
       shell: bash
 
     - name: Download OpenJDK 19
