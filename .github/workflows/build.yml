@@ -37,6 +37,7 @@ jobs:
         website: jdk.java.net
         release: 19
         install: false
+      shell: cmd
 
     - name: Setup Java and Apache Maven
       uses: actions/setup-java@v3
