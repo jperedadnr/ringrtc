@@ -60,7 +60,9 @@ jobs:
     - name: Download and extract JEXTRACT
       run: |
         $ProgressPreference = "SilentlyContinue"
-        Invoke-WebRequest "https://download.java.net/java/early_access/jextract/2/openjdk-19-jextract+2-3_" + $env:OS + "-" + $env:ARCH + "_bin.tar.gz" -OutFile jextract.tar.gz
+        $url = "https://download.java.net/java/early_access/jextract/2/openjdk-19-jextract+2-3_" + $env:OS + "-" + $env:ARCH + "_bin.tar.gz"
+        Write-Host "URL: $url"
+        Invoke-WebRequest Surl -OutFile jextract.tar.gz
         tar -xvzf jextract.tar.gz -C $env:GITHUB_WORKSPACE
         del jextract.tar.gz
       shell: powershell
