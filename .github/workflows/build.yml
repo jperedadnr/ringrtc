@@ -3,7 +3,7 @@ on:
   push:
     branches: [ win ]
   pull_request:
-    branches: [ javabuild ]
+    branches: [ win ]
 
 jobs:
   build:
