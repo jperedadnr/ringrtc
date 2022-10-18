@@ -7,10 +7,10 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        os: [ windows-latest ]
-    runs-on: ${{ matrix.os }}
+#    strategy:
+#      matrix:
+#        os: [ self-hosted ]
+    runs-on: [self-hosted, Windows, X64]
     steps:
     - uses: actions/checkout@v2
       with:
