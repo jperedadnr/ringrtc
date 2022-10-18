@@ -16,13 +16,6 @@ jobs:
       with:
         ref: javabuild
 
-    - name: Install latest bash on macOS
-      if: runner.os == 'macOS'
-      run: |
-        brew update
-        brew install bash
-        brew install coreutils
-
     - name: Set environment variables
       run: |
         $env:OS = "${RUNNER_OS,,}"
@@ -39,15 +32,6 @@ jobs:
         echo ::set-output name=archive::jdk.zip
         echo ::set-output name=version::19
 
-#    - name: Download OpenJDK 19 (macOS/Linux)
-#      if: runner.os != 'Windows'
-#      id: download
-#      uses: oracle-actions/setup-java@v1
-#      with:
-#        website: jdk.java.net
-#        release: 19
-#        install: false
-
     - name: Setup Java and Apache Maven
       uses: actions/setup-java@v3
       with:
@@ -61,38 +45,27 @@ jobs:
     - name: Checkout tools repo
       run: |
         echo "print env variables"
-        echo ${{ env.OS }}
-        echo ${{ env.ARCH }}
-        echo ${{ env.PLATFORM }}
-        echo ${{ env.CLASSIFIER }}
-        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
+        echo $env:OS
+        echo $env:ARCH
+        echo $env:PLATFORM
+        echo $env:CLASSIFIER
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $env:GITHUB_WORKSPACE
 
-    - name: Install rustup (Windows)
-      if: runner.os == 'Windows'
+    - name: Install rustup
       run: |
         $ProgressPreference = "SilentlyContinue"
         Invoke-WebRequest https://win.rustup.rs/ -OutFile rustup-init.exe
         .\rustup-init.exe -y --default-host=x86_64-pc-windows-msvc --profile=minimal
         del rustup-init.exe
       shell: powershell
-    - name: Install rustup (macOS/Linux)
-      if: runner.os != 'Windows'
-      run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
-    - name: Download and extract JEXTRACT (Windows)
-      if: runner.os == 'Windows'
+    - name: Download and extract JEXTRACT
       run: |
         $ProgressPreference = "SilentlyContinue"
         Invoke-WebRequest https://download.java.net/java/early_access/jextract/2/openjdk-19-jextract+2-3_${{ env.OS }}-${{ env.ARCH }}_bin.tar.gz -OutFile jextract.tar.gz
         tar -xvzf jextract.tar.gz -C $env:GITHUB_WORKSPACE
         del jextract.tar.gz
       shell: powershell
-    - name: Download and extract JEXTRACT (macOS/Linux)
-      if: runner.os != 'Windows'
-      run: |
-        download_url="https://download.java.net/java/early_access/jextract/2/openjdk-19-jextract+2-3_${{ env.OS }}-${{ env.ARCH }}_bin.tar.gz"
-        wget -q --show-progress -O $RUNNER_TEMP/jextract.tar.gz $download_url
-        tar -xzf $RUNNER_TEMP/jextract.tar.gz -C $GITHUB_WORKSPACE
 
     - name: Install make (Windows)
       if: runner.os == 'Windows'
