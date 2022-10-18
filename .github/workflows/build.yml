@@ -25,11 +25,10 @@ jobs:
 
     - name: Set environment variables
       run: |
-        echo "OS=${RUNNER_OS,,}" >> $env:GITHUB_ENV
-        echo "ARCH=${RUNNER_ARCH,,}" >> $env:GITHUB_ENV
-        echo "PLATFORM=windows" >> $env:GITHUB_ENV
-        echo "CLASSIFIER=win-x86_64" >> $env:GITHUB_ENV
-      shell: bash
+        $env:OS = "${RUNNER_OS,,}"
+        $env:ARCH = "${RUNNER_ARCH,,}"
+        $env:PLATFORM = "windows"
+        $env:CLASSIFIER = "win-x86_64"
 
     - name: Download OpenJDK 19
       id: download
