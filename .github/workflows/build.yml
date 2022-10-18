@@ -1,7 +1,7 @@
 name: Build and publish snapshots
 on:
   push:
-    branches: [ javabuild ]
+    branches: [ win ]
   pull_request:
     branches: [ javabuild ]
 
