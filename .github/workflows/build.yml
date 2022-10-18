@@ -90,6 +90,7 @@ jobs:
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = 0
         $env:PATH = "$env:TOOLS\depot_tools\;$env:TOOLS\make\bin\;$env:TOOLS\Python-2.7.18;" + $env:PATH
         echo $env:PATH
+        echo $env:JAVA_HOME
         make java PLATFORM=windows JEXTRACT="$env:TOOLS\jextract-19" JDK=$env:JAVA_HOME TARGET_ARCH=x64
       shell: powershell
 
