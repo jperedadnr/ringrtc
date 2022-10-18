@@ -66,8 +66,7 @@ jobs:
         del jextract.tar.gz
       shell: powershell
 
-    - name: Install make (Windows)
-      if: runner.os == 'Windows'
+    - name: Install make
       run: |
         $env:TOOLS = "$env:GITHUB_WORKSPACE\.." | Convert-Path
         $ProgressPreference = "SilentlyContinue"
@@ -76,30 +75,21 @@ jobs:
         del "$env:TOOLS\make.zip"
       shell: powershell
 
-    - name: Install python (Windows)
-      if: runner.os == 'Windows'
+    - name: Install python
       run: |
         $ProgressPreference = "SilentlyContinue"
-        mkdir python27
-        Invoke-WebRequest https://www.python.org/ftp/python/2.7.18/python-2.7.18.amd64.msi -OutFile python27\python.msi
-        msiexec.exe /i python27\python.msi /quiet
-        del python27\python.msi
+        Invoke-WebRequest https://www.python.org/ftp/python/2.7.18/python-2.7.18.amd64.msi -OutFile "$env:TOOLS\python.msi"
+        msiexec.exe /i "$env:TOOLS\python.msi" /quiet
+        del "$env:TOOLS\python.msi"
       shell: powershell
 
-    - name: Build (Windows)
-      if: runner.os == 'Windows'
+    - name: Build
       run: |
         $env:DEPOT_TOOLS_WIN_TOOLCHAIN = 0
-        $env:PATH = $env:GITHUB_WORKSPACE + "\depot_tools\;" + $env:GITHUB_WORKSPACE + "\make\bin\;" + $env:PATH
+        $env:PATH = "$env:TOOLS\depot_tools\;$env:TOOLS\make\bin\;" + $env:PATH
         echo $env:PATH
-        make java PLATFORM=${{ env.PLATFORM }} JEXTRACT=$env:GITHUB_WORKSPACE\jextract-19 JDK=$env:JAVA_HOME TARGET_ARCH=${{ env.ARCH }}
+        make java PLATFORM=windows JEXTRACT="$env:TOOLS\jextract-19" JDK=$env:JAVA_HOME TARGET_ARCH=x64
       shell: powershell
-    - name: Build (macOS/Linux)
-      if: runner.os != 'Windows'
-      run: |
-        export DEPOT_TOOLS_WIN_TOOLCHAIN=0
-        export PATH=$GITHUB_WORKSPACE/depot_tools/:$PATH
-        make java PLATFORM=${{ env.PLATFORM }} JEXTRACT=$GITHUB_WORKSPACE/jextract-19 JDK=$JAVA_HOME TARGET_ARCH=${{ env.ARCH }} MACOS_SDK_VERSION=12.1
 
     - name: Deploy snapshot
       run: |
