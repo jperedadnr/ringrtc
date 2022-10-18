@@ -44,7 +44,10 @@ jobs:
         echo $env:PLATFORM
         echo $env:CLASSIFIER
         $env:DEPOT_TOOLS = "$env:GITHUB_WORKSPACE\.." | Convert-Path
-        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git "$env:DEPOT_TOOLS\depot-tools"
+        if [[ (Test-Path -Path "$env:DEPOT_TOOLS\depot-tools" -PathType Container) != True ]]
+        then
+          git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git "$env:DEPOT_TOOLS\depot-tools"
+        fi
       shell: powershell
 
     - name: Install rustup
