@@ -7,9 +7,6 @@ on:
 
 jobs:
   build:
-#    strategy:
-#      matrix:
-#        os: [ self-hosted ]
     runs-on: [self-hosted, Windows, X64]
     steps:
     - uses: actions/checkout@v2
@@ -25,12 +22,9 @@ jobs:
 
     - name: Download OpenJDK 19 (Windows)
       if: runner.os == 'Windows'
-      id: download
       run: |
         $ProgressPreference = "SilentlyContinue"
         Invoke-WebRequest https://download.java.net/java/GA/jdk19.0.1/afdd2e245b014143b62ccb916125e3ce/10/GPL/openjdk-19.0.1_windows-x64_bin.zip -OutFile jdk.zip
-        echo ::set-output name=archive::jdk.zip
-        echo ::set-output name=version::19
 
     - name: Setup Java and Apache Maven
       uses: actions/setup-java@v3
@@ -49,8 +43,8 @@ jobs:
         echo $env:ARCH
         echo $env:PLATFORM
         echo $env:CLASSIFIER
-        $env:DEPOT_TOOLS = "$env:GITHUB_WORKSPACE\..\" | Convert-Path
-        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $env:DEPOT_TOOLS
+        $env:DEPOT_TOOLS = "$env:GITHUB_WORKSPACE\.." | Convert-Path
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git "$env:DEPOT_TOOLS\depot-tools"
       shell: powershell
 
     - name: Install rustup
