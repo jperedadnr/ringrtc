@@ -69,11 +69,11 @@ jobs:
     - name: Install make (Windows)
       if: runner.os == 'Windows'
       run: |
+        $env:TOOLS = "$env:GITHUB_WORKSPACE\.." | Convert-Path
         $ProgressPreference = "SilentlyContinue"
-        mkdir make
-        Invoke-WebRequest https://altushost-swe.dl.sourceforge.net/project/gnuwin32/make/3.81/make-3.81-bin.zip -OutFile make\make.zip
-        7z x make\make.zip
-        del make\make.zip
+        Invoke-WebRequest https://altushost-swe.dl.sourceforge.net/project/gnuwin32/make/3.81/make-3.81-bin.zip -OutFile "$env:TOOLS\make.zip"
+        Expand-Archive -LiteralPath "$env:TOOLS\make.zip" -DestinationPath "$env:TOOLS\make"
+        del "$env:TOOLS\make.zip"
       shell: powershell
 
     - name: Install python (Windows)
