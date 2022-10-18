@@ -72,7 +72,7 @@ jobs:
         $env:TOOLS = "$env:GITHUB_WORKSPACE\.." | Convert-Path
         $ProgressPreference = "SilentlyContinue"
         Invoke-WebRequest https://altushost-swe.dl.sourceforge.net/project/gnuwin32/make/3.81/make-3.81-bin.zip -OutFile "$env:TOOLS\make.zip"
-        Expand-Archive -LiteralPath "$env:TOOLS\make.zip" -DestinationPath "$env:TOOLS\make"
+        Expand-Archive -LiteralPath "$env:TOOLS\make.zip" -DestinationPath "$env:TOOLS\make" -Force
         del "$env:TOOLS\make.zip"
       shell: powershell
 
