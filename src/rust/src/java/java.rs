@@ -160,7 +160,8 @@ impl EventReporter {
                         unsafe {
                             (self.statusCallback)(
                                 call_id,
-                                hangup_device_id.unwrap().into(),
+                                1,
+                                // hangup_device_id.unwrap().into(),
                                 11,
                                 hangup_type as i32,
                             );
