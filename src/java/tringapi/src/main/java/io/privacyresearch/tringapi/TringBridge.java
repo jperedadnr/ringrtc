@@ -75,4 +75,16 @@ public class TringBridge {
         return service.startOutgoingCall(callId, peerId, localDeviceId);
     }
 
+    public void enableOutgoingVideo(boolean enable) {
+        service.enableOutgoingVideo(enable);
+    }
+
+    public byte[] getRemoteVideoFrame() {
+        return service.getRemoteVideoFrame();
+    }  
+
+    public void sendVideoFrame(int width, int height, byte[] raw) {
+        service.sendVideoFrame(width, width, raw);
+    }
+
 }

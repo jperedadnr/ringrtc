@@ -1,3 +1,5 @@
+#![allow(unused_parens)]
+
 use crate::core::signaling;
 use core::slice;
 use std::fmt;
@@ -153,4 +155,10 @@ impl JByteArray2D {
             buff: myrows,
         }
     }
+}
+
+#[repr(C)]
+struct Buffer {
+    data: *mut u8,
+    len: usize,
 }

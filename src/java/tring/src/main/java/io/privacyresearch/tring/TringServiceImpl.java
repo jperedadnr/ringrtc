@@ -65,7 +65,8 @@ public class TringServiceImpl implements TringService {
         scope = MemorySession.openShared();
         tringlib_h.initRingRTC(toJString(scope, "Hello from Java"));
         this.callEndpoint = tringlib_h.createCallEndpoint(createStatusCallback(), 
-                createAnswerCallback(), createOfferCallback(), createIceUpdateCallback());
+                createAnswerCallback(), createOfferCallback(), createIceUpdateCallback(),
+        createVideoFrameCallback());
     }
 
     @Override
@@ -118,6 +119,7 @@ public class TringServiceImpl implements TringService {
         tringlib_h.setOutgoingAudioEnabled(callEndpoint, true);
         LOG.info("And now accept the call");
         tringlib_h.acceptCall(callEndpoint, activeCallId);
+        LOG.info("Accepted the call");
     }
 
     @Override
@@ -145,6 +147,23 @@ public class TringServiceImpl implements TringService {
         return callId;
     }
 
+    @Override
+    public byte[] getRemoteVideoFrame() {
+        long a= tringlib_h.retrieveRemoteVideoFrame(callEndpoint);
+        return null;
+    }
+
+    @Override
+    public void enableOutgoingVideo(boolean enable) {
+        tringlib_h.setOutgoingVideoEnabled(callEndpoint, enable);
+    }
+
+    @Override
+    public void sendVideoFrame(int w, int h, byte[] raw) {
+        MemorySegment buff = scope.allocateArray(ValueLayout.JAVA_BYTE, raw);
+        tringlib_h.sendVideoFrame(callEndpoint, w, h, 1, buff);
+    }
+    
     static MemorySegment toJByteArray2D(MemorySession ms, List<byte[]> rows) {
         MemorySegment answer = JByteArray2D.allocate(ms);
         JByteArray2D.len$set(answer, rows.size());
@@ -237,8 +256,8 @@ byte[] destArr = new byte[(int)len];
 
     class StatusCallbackImpl implements createCallEndpoint$statusCallback {
         @Override
-        public void apply(MemorySegment callId, long _x1, int direction, int type) {
-            long id = CallId.id$get(callId);
+        public void apply(long id, long _x1, int direction, int type) {
+         //   long id = CallId.id$get(callId);
             api.statusCallback(id, _x1, direction, type);
         }
     }
@@ -299,9 +318,30 @@ byte[] destArr = new byte[(int)len];
         }
     }
 
+    Addressable createVideoFrameCallback() {
+        VideoFrameCallbackImpl sci = new VideoFrameCallbackImpl();
+        MemorySegment seg = createCallEndpoint$videoFrameCallback.allocate(sci, scope);
+        return seg.address();
+    }
+    
+    class VideoFrameCallbackImpl implements createCallEndpoint$videoFrameCallback {
+        @Override
+        public void apply(MemoryAddress opaque, int w, int h, long size) {
+            System.err.println("TRINGBRIDGE, send video data!");
+            System.err.println("TRING, videobytessize  = "+size);
+            MemorySegment segment = MemorySegment.ofAddress(opaque, size, scope);
+            System.err.println("got segment = "+ segment);
+            byte[] raw = segment.toArray(ValueLayout.JAVA_BYTE);
+            api.getVideoFrame(w, h, raw);
+            sendAck();
+            System.err.println("TRING, ack sent for videoframe");
+        }
+    }
+
     void sendAck() {
         MemorySegment callid = MemorySegment.allocateNative(8, scope);
         callid.set(ValueLayout.JAVA_LONG, 0l, activeCallId);
         tringlib_h.signalMessageSent(callEndpoint, callid);
     }
+
 }

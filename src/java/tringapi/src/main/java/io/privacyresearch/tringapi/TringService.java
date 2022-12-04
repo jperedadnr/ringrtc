@@ -33,4 +33,13 @@ public interface TringService {
         return "Unresolved TringService";
     }
 
+    /**
+     * Disable or enable outgoing video.
+     * @param enable true if we want to enable outgoing video, false otherwise
+     */
+    public void enableOutgoingVideo(boolean enable);
+
+    public byte[] getRemoteVideoFrame();
+    public void sendVideoFrame(int w, int h, byte[] raw);
+
 }
