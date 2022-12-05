@@ -92,6 +92,7 @@ jobs:
         echo $env:PATH
         echo $env:JAVA_HOME
         make java PLATFORM=win32 JEXTRACT="$env:TOOLS\jextract-19" JDK=$env:JAVA_HOME TARGET_ARCH=x64
+        "$env:GITHUB_WORKSPACE/bin/prepare-workspace" PLATFORM=win32
       shell: powershell
 
     - name: Deploy snapshot
