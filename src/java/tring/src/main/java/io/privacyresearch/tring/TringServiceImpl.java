@@ -327,14 +327,11 @@ byte[] destArr = new byte[(int)len];
     class VideoFrameCallbackImpl implements createCallEndpoint$videoFrameCallback {
         @Override
         public void apply(MemoryAddress opaque, int w, int h, long size) {
-            System.err.println("TRINGBRIDGE, send video data!");
-            System.err.println("TRING, videobytessize  = "+size);
+            LOG.fine("Got incoming video frame in Java layer");
             MemorySegment segment = MemorySegment.ofAddress(opaque, size, scope);
-            System.err.println("got segment = "+ segment);
             byte[] raw = segment.toArray(ValueLayout.JAVA_BYTE);
             api.getVideoFrame(w, h, raw);
             sendAck();
-            System.err.println("TRING, ack sent for videoframe");
         }
     }
 
