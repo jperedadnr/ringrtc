@@ -27,10 +27,19 @@ public interface TringService {
 
     public void receivedAnswer(String peerId, long callId, int senderDeviceId,
             byte[] senderKey, byte[] receiverKey, byte[] opaque);
-    public long startOutgoingCall(long callId, String peerId, int localDeviceId);
+    public long startOutgoingCall(long callId, String peerId, int localDeviceId, boolean enableVideo);
     
     public default String getVersionInfo() {
         return "Unresolved TringService";
     }
+
+    /**
+     * Disable or enable outgoing video.
+     * @param enable true if we want to enable outgoing video, false otherwise
+     */
+    public void enableOutgoingVideo(boolean enable);
+
+    public byte[] getRemoteVideoFrame();
+    public void sendVideoFrame(int w, int h, byte[] raw);
 
 }

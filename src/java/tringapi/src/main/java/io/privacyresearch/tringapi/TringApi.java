@@ -16,4 +16,6 @@ public interface TringApi {
 
     void iceUpdateCallback(List<byte[]> iceCandidates);
 
+    void getVideoFrame(int w, int h, byte[] raw);
+
 }

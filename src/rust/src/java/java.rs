@@ -1,9 +1,14 @@
+#![allow(unused_parens)]
+
 use std::collections::HashMap;
 
+use std::slice;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{channel, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+
+use libc::size_t;
 
 use crate::common::{CallDirection, CallId, CallMediaType, DeviceId, Result};
 use crate::core::bandwidth_mode::BandwidthMode;
@@ -22,7 +27,9 @@ use crate::native::{
     NativePlatform, PeerId, SignalingSender,
 };
 use crate::webrtc::logging;
-use crate::webrtc::media::{AudioTrack, VideoFrame, VideoSink, VideoSource, VideoTrack};
+use crate::webrtc::media::{
+    AudioTrack, VideoFrame, VideoPixelFormat, VideoSink, VideoSource, VideoTrack,
+};
 
 use crate::webrtc::peer_connection::AudioLevel;
 
@@ -97,7 +104,7 @@ pub enum Event {
 #[repr(C)]
 #[allow(non_snake_case)]
 struct EventReporter {
-    pub statusCallback: unsafe extern "C" fn(CallId, u64, i32, i32),
+    pub statusCallback: unsafe extern "C" fn(u64, u64, i32, i32),
     pub answerCallback: unsafe extern "C" fn(JArrayByte),
     pub offerCallback: unsafe extern "C" fn(JArrayByte),
     pub iceUpdateCallback: unsafe extern "C" fn(JArrayByte),
@@ -107,7 +114,7 @@ struct EventReporter {
 
 impl EventReporter {
     fn new(
-        statusCallback: extern "C" fn(CallId, u64, i32, i32),
+        statusCallback: extern "C" fn(u64, u64, i32, i32),
         answerCallback: extern "C" fn(JArrayByte),
         offerCallback: extern "C" fn(JArrayByte),
         iceUpdateCallback: extern "C" fn(JArrayByte),
@@ -127,10 +134,13 @@ impl EventReporter {
     fn send(&self, event: Event) -> Result<()> {
         match event {
             Event::SendSignaling(_peer_id, _maybe_device_id, call_id, signal) => {
-                info!("[JV] SendSignalingEvent");
+                info!("JavaPlatform needs to send SignalingEvent to app");
                 match signal {
                     signaling::Message::Offer(offer) => {
-                        info!("[JV] SendSignaling OFFER Event");
+                        info!(
+                            "[JV] SendSignaling OFFER Event and call_id = {}",
+                            call_id.as_u64()
+                        );
                         let op = JArrayByte::new(offer.opaque);
                         unsafe {
                             (self.offerCallback)(op);
@@ -159,7 +169,7 @@ impl EventReporter {
                         info!("[JV] SendSignaling Hangup Event");
                         unsafe {
                             (self.statusCallback)(
-                                call_id,
+                                call_id.as_u64(),
                                 1,
                                 // hangup_device_id.unwrap().into(),
                                 11,
@@ -171,19 +181,20 @@ impl EventReporter {
                         info!("[JV] unknownSendSignalingEvent WHICH IS WHAT WE NEED TO FIX NOW!");
                     }
                 }
+                info!("JavaPlatform asked app to send SignalingEvent");
             }
             Event::CallState(_peer_id, call_id, CallState::Incoming(call_media_type)) => {
                 info!("[JV] CALLSTATEEVEMNT");
                 let direction = 0;
                 unsafe {
-                    (self.statusCallback)(call_id, 1, direction, call_media_type as i32);
+                    (self.statusCallback)(call_id.as_u64(), 1, direction, call_media_type as i32);
                 }
             }
             Event::CallState(_peer_id, call_id, CallState::Outgoing(call_media_type)) => {
                 info!("[JV] CALLSTATEEVEMNT");
                 let direction = 1;
                 unsafe {
-                    (self.statusCallback)(call_id, 1, direction, call_media_type as i32);
+                    (self.statusCallback)(call_id.as_u64(), 1, direction, call_media_type as i32);
                 }
             }
             Event::CallState(_peer_id, call_id, state) => {
@@ -199,9 +210,20 @@ impl EventReporter {
                 };
                 info!("New state = {} and index = {}", state_string, state_index);
                 unsafe {
-                    (self.statusCallback)(call_id, 1, 10 * state_index, 0);
+                    (self.statusCallback)(call_id.as_u64(), 1, 10 * state_index, 0);
                 }
             }
+            Event::RemoteVideoStateChange(peer_id, enabled) => {
+                info!("RemoveVideoStateChange to {}", enabled);
+                unsafe {
+                    if enabled {
+                        (self.statusCallback)(1, 1, 22, 31);
+                    } else {
+                        (self.statusCallback)(1, 1, 22, 32);
+                    }
+                }
+            }
+
             _ => {
                 info!("[JV] unknownevent");
             }
@@ -351,15 +373,17 @@ pub struct CallEndpoint {
     // Boxed so we can pass it as a Box<dyn VideoSink>
     incoming_video_sink: Box<LastFramesVideoSink>,
     peer_connection_factory: PeerConnectionFactory,
+    videoFrameCallback: extern "C" fn(*const u8, u32, u32, size_t),
 }
 
 impl CallEndpoint {
     fn new<'a>(
         use_new_audio_device_module: bool,
-        statusCallback: extern "C" fn(CallId, u64, i32, i32),
+        statusCallback: extern "C" fn(u64, u64, i32, i32),
         answerCallback: extern "C" fn(JArrayByte),
         offerCallback: extern "C" fn(JArrayByte),
         iceUpdateCallback: extern "C" fn(JArrayByte),
+        videoFrameCallback: extern "C" fn(*const u8, u32, u32, size_t),
     ) -> Result<Self> {
         // Relevant for both group calls and 1:1 calls
         let (events_sender, _events_receiver) = channel::<Event>();
@@ -415,6 +439,7 @@ impl CallEndpoint {
             outgoing_video_track,
             incoming_video_sink,
             peer_connection_factory,
+            videoFrameCallback,
         })
     }
 }
@@ -426,6 +451,11 @@ struct LastFramesVideoSink {
 
 impl VideoSink for LastFramesVideoSink {
     fn on_video_frame(&self, track_id: u32, frame: VideoFrame) {
+        info!("Got videoframe!");
+        // let myframe: &mut[u8;512] = &mut [0;512];
+        // frame.to_rgba(myframe.as_mut_slice());
+        // info!("uploading frame = {:?}", myframe);
+        // info!("frame uploaded");
         self.last_frame_by_track_id
             .lock()
             .unwrap()
@@ -469,10 +499,11 @@ pub unsafe extern "C" fn getVersion() -> i64 {
 
 #[no_mangle]
 pub unsafe extern "C" fn createCallEndpoint(
-    statusCallback: extern "C" fn(CallId, u64, i32, i32),
+    statusCallback: extern "C" fn(u64, u64, i32, i32),
     answerCallback: extern "C" fn(JArrayByte),
     offerCallback: extern "C" fn(JArrayByte),
     iceUpdateCallback: extern "C" fn(JArrayByte),
+    videoFrameCallback: extern "C" fn(*const u8, u32, u32, size_t),
 ) -> i64 {
     let call_endpoint = CallEndpoint::new(
         false,
@@ -480,6 +511,7 @@ pub unsafe extern "C" fn createCallEndpoint(
         answerCallback,
         offerCallback,
         iceUpdateCallback,
+        videoFrameCallback,
     )
     .unwrap();
     let call_endpoint_box = Box::new(call_endpoint);
@@ -643,9 +675,8 @@ pub unsafe extern "C" fn receivedIce(
     sender_device_id: DeviceId,
     icepack: JByteArray2D,
 ) {
-    info!("JavaRing, received_ice with length = {}", icepack.len);
+    info!("receivedIce from app with length = {}", icepack.len);
     let callendpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
-    info!("Received offer, endpoint = {:?}", endpoint);
     let call_id = CallId::from(call_id);
     let mut ice_candidates = Vec::new();
     for j in 0..icepack.len {
@@ -662,12 +693,13 @@ pub unsafe extern "C" fn receivedIce(
             sender_device_id,
         },
     );
+    info!("receivedIce invoked call_manager and will now return to app");
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn acceptCall(endpoint: i64, call_id: u64) -> i64 {
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
-    info!("now accept call");
+    info!("acceptCall requested by app");
     let call_id = CallId::from(call_id);
     endpoint.call_manager.accept_call(call_id);
     573
@@ -724,4 +756,72 @@ pub unsafe extern "C" fn setOutgoingAudioEnabled(endpoint: i64, enable: bool) ->
     info!("Have to set outgoing audio enabled to {}", enable);
     endpoint.outgoing_audio_track.set_enabled(enable);
     1
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn setOutgoingVideoEnabled(endpoint: i64, enable: bool) -> i64 {
+    info!("Hava to setOutgoingVideoEnabled({})", enable);
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    endpoint.outgoing_video_track.set_enabled(enable);
+    let mut active_connection = endpoint.call_manager.active_connection();
+    active_connection
+        .expect("No active connection!")
+        .update_sender_status(signaling::SenderStatus {
+            video_enabled: Some(enable),
+            ..Default::default()
+        });
+    1
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn sendVideoFrame(
+    endpoint: i64,
+    width: u32,
+    height: u32,
+    pixel_format: i32,
+    raw: *const u8,
+) -> i64 {
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    let size = width * height * 4;
+    info!(
+        "Will send VideoFrame, width = {}, heigth = {}, pixelformat = {}, size = {}",
+        width, height, pixel_format, size
+    );
+    let buffer: &[u8] = unsafe { slice::from_raw_parts(raw, size as usize) };
+
+    let pixel_format = VideoPixelFormat::from_i32(pixel_format);
+    let pixel_format = pixel_format.unwrap();
+    info!(
+        "buf[0] = {} and buf[1] = {} and  buf[300] = {}, size = {}",
+        buffer[0], buffer[1], buffer[300], size
+    );
+    let frame = VideoFrame::copy_from_slice(width, height, pixel_format, buffer);
+    endpoint.outgoing_video_source.push_frame(frame);
+    1
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn retrieveRemoteVideoFrame(endpoint: i64) -> i64 {
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+    info!("Have to retrieve remote video frame");
+    let frame = endpoint.incoming_video_sink.pop(0);
+    if let Some(frame) = frame {
+        let frame = frame.apply_rotation();
+        let width: u32 = frame.width();
+        let height: u32 = frame.height();
+        let myframe: &mut [u8] = &mut [0; 512000];
+        frame.to_rgba(myframe);
+        info!(
+            "Frame0 = {}, w = {}, h = {}",
+            myframe[0],
+            frame.width(),
+            frame.height()
+        );
+        let o1 = Box::new(myframe);
+        let op = o1.as_ptr();
+        (endpoint.videoFrameCallback)(op, width, height, 512000);
+        1
+    } else {
+        0
+    }
 }
