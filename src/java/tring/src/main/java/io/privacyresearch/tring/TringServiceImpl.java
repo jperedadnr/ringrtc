@@ -139,11 +139,11 @@ public class TringServiceImpl implements TringService {
      * @return the same call_id as the one we were passed, if success
      */
     @Override
-    public long startOutgoingCall(long callId, String peerId, int localDeviceId) {
-        LOG.info("Tring will start outgoing call to "+peerId+" with localDevice "+localDeviceId);
+    public long startOutgoingCall(long callId, String peerId, int localDeviceId, boolean enableVideo) {
+        LOG.info("Tring will start outgoing call to "+peerId+" with localDevice "+localDeviceId+" and enableVideo = "+enableVideo);
         tringlib_h.setAudioInput(callEndpoint, (short)0);
         tringlib_h.setAudioOutput(callEndpoint, (short)0);
-        tringlib_h.createOutgoingCall(callEndpoint, toJString(scope, peerId), false, localDeviceId, callId);
+        tringlib_h.createOutgoingCall(callEndpoint, toJString(scope, peerId), enableVideo, localDeviceId, callId);
         return callId;
     }
 

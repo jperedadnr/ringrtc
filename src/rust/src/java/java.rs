@@ -769,9 +769,9 @@ pub unsafe extern "C" fn setOutgoingVideoEnabled(endpoint: i64, enable: bool) ->
 
 #[no_mangle]
 pub unsafe extern "C" fn sendVideoFrame(endpoint: i64, width: u32, height: u32, pixel_format: i32, raw: *const u8) -> i64 {
-    info!("Will send VideoFrame");
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     let size = width * height * 4;
+    info!("Will send VideoFrame, width = {}, heigth = {}, pixelformat = {}, size = {}",width, height, pixel_format, size);
     let buffer: &[u8] = unsafe {slice::from_raw_parts(raw, size as usize)};
 
     let pixel_format = VideoPixelFormat::from_i32(pixel_format);
