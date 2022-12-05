@@ -27,7 +27,9 @@ use crate::native::{
     NativePlatform, PeerId, SignalingSender,
 };
 use crate::webrtc::logging;
-use crate::webrtc::media::{AudioTrack, VideoFrame, VideoPixelFormat, VideoSink, VideoSource, VideoTrack};
+use crate::webrtc::media::{
+    AudioTrack, VideoFrame, VideoPixelFormat, VideoSink, VideoSource, VideoTrack,
+};
 
 use crate::webrtc::peer_connection::AudioLevel;
 
@@ -135,7 +137,10 @@ impl EventReporter {
                 info!("JavaPlatform needs to send SignalingEvent to app");
                 match signal {
                     signaling::Message::Offer(offer) => {
-                        info!("[JV] SendSignaling OFFER Event and call_id = {}", call_id.as_u64());
+                        info!(
+                            "[JV] SendSignaling OFFER Event and call_id = {}",
+                            call_id.as_u64()
+                        );
                         let op = JArrayByte::new(offer.opaque);
                         unsafe {
                             (self.offerCallback)(op);
@@ -446,11 +451,11 @@ struct LastFramesVideoSink {
 
 impl VideoSink for LastFramesVideoSink {
     fn on_video_frame(&self, track_id: u32, frame: VideoFrame) {
-info!("Got videoframe!");
-// let myframe: &mut[u8;512] = &mut [0;512];
-// frame.to_rgba(myframe.as_mut_slice());
-// info!("uploading frame = {:?}", myframe);
-// info!("frame uploaded");
+        info!("Got videoframe!");
+        // let myframe: &mut[u8;512] = &mut [0;512];
+        // frame.to_rgba(myframe.as_mut_slice());
+        // info!("uploading frame = {:?}", myframe);
+        // info!("frame uploaded");
         self.last_frame_by_track_id
             .lock()
             .unwrap()
@@ -753,36 +758,47 @@ pub unsafe extern "C" fn setOutgoingAudioEnabled(endpoint: i64, enable: bool) ->
     1
 }
 
-
 #[no_mangle]
 pub unsafe extern "C" fn setOutgoingVideoEnabled(endpoint: i64, enable: bool) -> i64 {
     info!("Hava to setOutgoingVideoEnabled({})", enable);
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     endpoint.outgoing_video_track.set_enabled(enable);
     let mut active_connection = endpoint.call_manager.active_connection();
-    active_connection.expect("No active connection!").update_sender_status(signaling::SenderStatus {
-        video_enabled: Some(enable),
-        ..Default::default()
-    });
+    active_connection
+        .expect("No active connection!")
+        .update_sender_status(signaling::SenderStatus {
+            video_enabled: Some(enable),
+            ..Default::default()
+        });
     1
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn sendVideoFrame(endpoint: i64, width: u32, height: u32, pixel_format: i32, raw: *const u8) -> i64 {
+pub unsafe extern "C" fn sendVideoFrame(
+    endpoint: i64,
+    width: u32,
+    height: u32,
+    pixel_format: i32,
+    raw: *const u8,
+) -> i64 {
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     let size = width * height * 4;
-    info!("Will send VideoFrame, width = {}, heigth = {}, pixelformat = {}, size = {}",width, height, pixel_format, size);
-    let buffer: &[u8] = unsafe {slice::from_raw_parts(raw, size as usize)};
+    info!(
+        "Will send VideoFrame, width = {}, heigth = {}, pixelformat = {}, size = {}",
+        width, height, pixel_format, size
+    );
+    let buffer: &[u8] = unsafe { slice::from_raw_parts(raw, size as usize) };
 
     let pixel_format = VideoPixelFormat::from_i32(pixel_format);
     let pixel_format = pixel_format.unwrap();
-    info!("buf[0] = {} and buf[1] = {} and  buf[300] = {}, size = {}", buffer[0], buffer[1], buffer[300], size);
+    info!(
+        "buf[0] = {} and buf[1] = {} and  buf[300] = {}, size = {}",
+        buffer[0], buffer[1], buffer[300], size
+    );
     let frame = VideoFrame::copy_from_slice(width, height, pixel_format, buffer);
     endpoint.outgoing_video_source.push_frame(frame);
     1
 }
-
-
 
 #[no_mangle]
 pub unsafe extern "C" fn retrieveRemoteVideoFrame(endpoint: i64) -> i64 {
@@ -793,9 +809,14 @@ pub unsafe extern "C" fn retrieveRemoteVideoFrame(endpoint: i64) -> i64 {
         let frame = frame.apply_rotation();
         let width: u32 = frame.width();
         let height: u32 = frame.height();
-        let myframe: &mut[u8] = &mut [0;512000];
+        let myframe: &mut [u8] = &mut [0; 512000];
         frame.to_rgba(myframe);
-        info!("Frame0 = {}, w = {}, h = {}", myframe[0], frame.width(), frame.height());
+        info!(
+            "Frame0 = {}, w = {}, h = {}",
+            myframe[0],
+            frame.width(),
+            frame.height()
+        );
         let o1 = Box::new(myframe);
         let op = o1.as_ptr();
         (endpoint.videoFrameCallback)(op, width, height, 512000);
@@ -804,4 +825,3 @@ pub unsafe extern "C" fn retrieveRemoteVideoFrame(endpoint: i64) -> i64 {
         0
     }
 }
-
