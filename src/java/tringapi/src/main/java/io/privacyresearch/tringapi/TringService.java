@@ -40,6 +40,6 @@ public interface TringService {
     public void enableOutgoingVideo(boolean enable);
 
     public byte[] getRemoteVideoFrame();
-    public void sendVideoFrame(int w, int h, byte[] raw);
+    public void sendVideoFrame(int w, int h, int pixelFormat, byte[] raw);
 
 }
