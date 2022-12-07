@@ -83,8 +83,8 @@ public class TringBridge {
         return service.getRemoteVideoFrame();
     }  
 
-    public void sendVideoFrame(int width, int height, byte[] raw) {
-        service.sendVideoFrame(width, height, raw);
+    public void sendVideoFrame(int width, int height, int pixelFormat, byte[] raw) {
+        service.sendVideoFrame(width, height, pixelFormat, raw);
     }
 
 }
