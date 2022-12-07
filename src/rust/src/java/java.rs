@@ -782,7 +782,10 @@ pub unsafe extern "C" fn sendVideoFrame(
     raw: *const u8,
 ) -> i64 {
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
-    let size = width * height * 4;
+    let mut size = width * height * 2;
+    if (pixel_format == 1) {
+        size = size * 2;
+    }
     info!(
         "Will send VideoFrame, width = {}, heigth = {}, pixelformat = {}, size = {}",
         width, height, pixel_format, size
