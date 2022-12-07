@@ -160,8 +160,10 @@ public class TringServiceImpl implements TringService {
 
     @Override
     public void sendVideoFrame(int w, int h, int pixelFormat, byte[] raw) {
-        MemorySegment buff = scope.allocateArray(ValueLayout.JAVA_BYTE, raw);
-        tringlib_h.sendVideoFrame(callEndpoint, w, h, pixelFormat, buff);
+        try ( MemorySession session = MemorySession.openConfined()) {
+            MemorySegment buff = session.allocateArray(ValueLayout.JAVA_BYTE, raw);
+            tringlib_h.sendVideoFrame(callEndpoint, w, h, pixelFormat, buff);
+        }
     }
     
     static MemorySegment toJByteArray2D(MemorySession ms, List<byte[]> rows) {
