@@ -1,6 +1,6 @@
 package io.privacyresearch.tring;
 
-import io.privacyresearch.tringapi.TringApi;
+import io.privacyresearch.tringapi.TringFrame;
 import io.privacyresearch.tringapi.TringService;
 import java.lang.foreign.Addressable;
 import java.lang.foreign.MemoryAddress;
@@ -9,7 +9,9 @@ import java.lang.foreign.MemorySession;
 import java.lang.foreign.ValueLayout;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class TringServiceImpl implements TringService {
@@ -23,7 +25,8 @@ public class TringServiceImpl implements TringService {
     private io.privacyresearch.tringapi.TringApi api;
     private long activeCallId;
     static String libName = "unknown";
-    
+    BlockingQueue<TringFrame> frameQueue = new LinkedBlockingQueue();
+
     private static final Logger LOG = Logger.getLogger(TringServiceImpl.class.getName());
 
     static {
@@ -148,8 +151,34 @@ public class TringServiceImpl implements TringService {
     }
 
     @Override
-    public byte[] getRemoteVideoFrame() {
-        long a= tringlib_h.retrieveRemoteVideoFrame(callEndpoint);
+    public TringFrame getRemoteVideoFrame(boolean skip) {
+        LOG.info("Get remote videoframe");
+        try {
+            long a = tringlib_h.retrieveRemoteVideoFrame(callEndpoint);
+            int i = 0;
+            while (a == 0) {
+                Thread.sleep(50);
+                a = tringlib_h.retrieveRemoteVideoFrame(callEndpoint);
+                i++;
+                if (i > 40) return null;
+            }
+            LOG.info("Asked for a remote frame");
+            synchronized (frameQueue) {
+                TringFrame frame = frameQueue.poll();
+                if (frame == null) {
+                    frameQueue.wait(15000);
+                    frame = frameQueue.poll();
+                }
+                LOG.info("Got a remote frame? " + frame);
+                if (frame != null) {
+                    return frame;
+                }
+            }
+
+        } catch (InterruptedException ex) {
+            LOG.log(Level.SEVERE, null, ex);
+        }
+        LOG.info("Didn't receive a video frame from the other side in 15 seconds, return null");
         return null;
     }
 
@@ -329,10 +358,15 @@ byte[] destArr = new byte[(int)len];
     class VideoFrameCallbackImpl implements createCallEndpoint$videoFrameCallback {
         @Override
         public void apply(MemoryAddress opaque, int w, int h, long size) {
-            LOG.fine("Got incoming video frame in Java layer");
+            LOG.info("Got incoming video frame in Java layer");
             MemorySegment segment = MemorySegment.ofAddress(opaque, size, scope);
             byte[] raw = segment.toArray(ValueLayout.JAVA_BYTE);
-            api.getVideoFrame(w, h, raw);
+            synchronized (frameQueue) {
+                LOG.info("Add frame to queue");
+                frameQueue.add(new TringFrame(w,h,-1,raw));
+                frameQueue.notifyAll();
+            }
+            LOG.info("Processed incoming video frame in Java layer");
             sendAck();
         }
     }
