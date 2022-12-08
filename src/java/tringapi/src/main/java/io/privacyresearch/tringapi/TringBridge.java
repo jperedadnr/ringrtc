@@ -79,7 +79,7 @@ public class TringBridge {
         service.enableOutgoingVideo(enable);
     }
 
-    public byte[] getRemoteVideoFrame() {
+    public TringFrame getRemoteVideoFrame() {
         return service.getRemoteVideoFrame();
     }  
 

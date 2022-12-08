@@ -39,7 +39,16 @@ public interface TringService {
      */
     public void enableOutgoingVideo(boolean enable);
 
-    public byte[] getRemoteVideoFrame();
+    /**
+     * Get a videoframe from the other side.
+     * @param skip if true, ignore all old frames, and return the most recent one
+     * @return a frame
+     */
+    public TringFrame getRemoteVideoFrame(boolean skip);
+
+    public default TringFrame getRemoteVideoFrame() {
+        return getRemoteVideoFrame(false);
+    }
     public void sendVideoFrame(int w, int h, int pixelFormat, byte[] raw);
 
 }

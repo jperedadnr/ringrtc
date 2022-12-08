@@ -764,12 +764,16 @@ pub unsafe extern "C" fn setOutgoingVideoEnabled(endpoint: i64, enable: bool) ->
     let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     endpoint.outgoing_video_track.set_enabled(enable);
     let mut active_connection = endpoint.call_manager.active_connection();
-    active_connection
-        .expect("No active connection!")
-        .update_sender_status(signaling::SenderStatus {
-            video_enabled: Some(enable),
-            ..Default::default()
-        });
+    if (active_connection.is_ok()) {
+        active_connection
+            .expect("No active connection!")
+            .update_sender_status(signaling::SenderStatus {
+                video_enabled: Some(enable),
+                ..Default::default()
+            });
+    } else {
+        info!("No active connection")
+    }
     1
 }
 
