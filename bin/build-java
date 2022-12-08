@@ -158,5 +158,6 @@ export MACOSX_DEPLOYMENT_TARGET="10.10"
     cd ../java/tringapi
     mvn clean install
     cd ../tring
+    echo "mvn -Dclassifier=$DEFAULT_PLATFORM-$CARGO_ARCH clean install"
     mvn -Dclassifier=$DEFAULT_PLATFORM-$CARGO_ARCH clean install
 )
