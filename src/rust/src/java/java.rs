@@ -166,11 +166,15 @@ impl EventReporter {
                     }
                     signaling::Message::Hangup(hangup) => {
                         let (hangup_type, hangup_device_id) = hangup.to_type_and_device_id();
+                        let device_id: u64 = match hangup_device_id {
+                            Some(device_id) => device_id.into(),
+                            None => 0,
+                        };
                         info!("[JV] SendSignaling Hangup Event");
                         unsafe {
                             (self.statusCallback)(
                                 call_id.as_u64(),
-                                hangup_device_id.unwrap().into(),
+                                device_id,
                                 11,
                                 hangup_type as i32,
                             );

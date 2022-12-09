@@ -288,8 +288,9 @@ byte[] destArr = new byte[(int)len];
     class StatusCallbackImpl implements createCallEndpoint$statusCallback {
         @Override
         public void apply(long id, long _x1, int direction, int type) {
-         //   long id = CallId.id$get(callId);
+            LOG.info("Got new status from ringrtc, id = " + id+", x1 = " + _x1+", dir = " + direction+", type = "+type);
             api.statusCallback(id, _x1, direction, type);
+            sendAck();
         }
     }
     
@@ -371,6 +372,8 @@ byte[] destArr = new byte[(int)len];
         }
     }
 
+    // We need to inform ringrtc that we handled a message, so that it is ok
+    // with sending the next message
     void sendAck() {
         MemorySegment callid = MemorySegment.allocateNative(8, scope);
         callid.set(ValueLayout.JAVA_LONG, 0l, activeCallId);
