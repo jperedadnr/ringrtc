@@ -51,4 +51,6 @@ public interface TringService {
     }
     public void sendVideoFrame(int w, int h, int pixelFormat, byte[] raw);
 
+    public void setArray();
+
 }

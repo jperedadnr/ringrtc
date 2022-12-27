@@ -853,15 +853,25 @@ pub unsafe extern "C" fn sendVideoFrame(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn retrieveRemoteVideoFrame(endpoint: i64) -> i64 {
-    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
+pub unsafe extern "C" fn fillLargeArray(endpoint: i64, mybuffer: *mut u8) -> i64 {
+    let zero = *mybuffer.offset(0);
+    let first = *mybuffer.offset(1);
+    let second = *mybuffer.offset(12);
+    info!("VAL 1 = {} and VAL2 = {}", first, second);
+    *mybuffer.offset(12) = 13;
+    1
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn fillRemoteVideoFrame(endpoint: i64, mybuffer: *mut u8, len: usize) -> i64 {
     info!("Have to retrieve remote video frame");
+    let endpoint = ptr_as_mut(endpoint as *mut CallEndpoint).unwrap();
     let frame = endpoint.incoming_video_sink.pop(0);
     if let Some(frame) = frame {
         let frame = frame.apply_rotation();
         let width: u32 = frame.width();
         let height: u32 = frame.height();
-        let myframe: &mut [u8] = &mut [0; 512000];
+        let myframe: &mut [u8] = slice::from_raw_parts_mut(mybuffer, len);
         frame.to_rgba(myframe);
         info!(
             "Frame0 = {}, w = {}, h = {}",
@@ -869,10 +879,9 @@ pub unsafe extern "C" fn retrieveRemoteVideoFrame(endpoint: i64) -> i64 {
             frame.width(),
             frame.height()
         );
-        let o1 = Box::new(myframe);
-        let op = o1.as_ptr();
-        (endpoint.videoFrameCallback)(op, width, height, 512000);
-        1
+        let mut size: i64 = (frame.width() << 16).into();
+        size = size + frame.height() as i64;
+        size
     } else {
         0
     }

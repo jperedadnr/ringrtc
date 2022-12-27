@@ -17,6 +17,7 @@ import java.util.logging.Logger;
 
 public class TringServiceImpl implements TringService {
 
+    static final int BANDWIDTH_QUALITY_HIGH = 2;
     private static final TringService instance = new TringServiceImpl();
     private static boolean nativeSupport = false;
     private static long nativeVersion = 0;
@@ -120,7 +121,7 @@ public class TringServiceImpl implements TringService {
     public void proceed(long callId, String iceUser, String icePwd, List<byte[]> ice) {
         MemorySegment icePack = toJByteArray2D(scope, ice);
         tringlib_h.setOutgoingAudioEnabled(callEndpoint, true);
-        tringlib_h.proceedCall(callEndpoint, callId, 0, 0,
+        tringlib_h.proceedCall(callEndpoint, callId, BANDWIDTH_QUALITY_HIGH, 0,
                 toJString(scope, iceUser), toJString(scope, icePwd), icePack);
     }
 
@@ -166,35 +167,41 @@ public class TringServiceImpl implements TringService {
         return callId;
     }
 
+    // for testing only
+    public void setArray() {
+        LOG.info("SET ARRAY");
+        int CAP = 1000000;
+        for (int i = 0; i < 1000; i++) {
+            try (MemorySession rscope = MemorySession.openConfined()) {
+                MemorySegment segment = MemorySegment.allocateNative(CAP, scope);
+                tringlib_h.fillLargeArray(123, segment);
+                ByteBuffer bb = segment.asByteBuffer();
+                byte[] bar = new byte[CAP];
+                bb.get(bar, 0, CAP);
+                LOG.info("Got Array " + i + " sized " + bar.length);
+            }
+        }
+        LOG.info("DONE");
+    }
+
     @Override
     public TringFrame getRemoteVideoFrame(boolean skip) {
-        LOG.info("Get remote videoframe");
-        try {
-            long a = tringlib_h.retrieveRemoteVideoFrame(callEndpoint);
-            int i = 0;
-            while (a == 0) {
-                Thread.sleep(50);
-                a = tringlib_h.retrieveRemoteVideoFrame(callEndpoint);
-                i++;
-                if (i > 40) return null;
+        int CAP = 5000000;
+        try (MemorySession rscope = MemorySession.openShared()) {
+            MemorySegment segment = MemorySegment.allocateNative(CAP, rscope);
+            long res = tringlib_h.fillRemoteVideoFrame(callEndpoint, segment, CAP);
+            if (res != 0) {
+                int w = (int) (res >> 16);
+                int h = (int) (res % (1 <<16));
+                byte[] raw = new byte[w * h * 4];
+                ByteBuffer bb = segment.asByteBuffer();
+                bb.get(raw);
+                TringFrame answer = new TringFrame(w, h, -1, raw);
+                return answer;
             }
-            LOG.info("Asked for a remote frame");
-            synchronized (frameQueue) {
-                TringFrame frame = frameQueue.poll();
-                if (frame == null) {
-                    frameQueue.wait(15000);
-                    frame = frameQueue.poll();
-                }
-                LOG.info("Got a remote frame? " + frame);
-                if (frame != null) {
-                    return frame;
-                }
-            }
-
-        } catch (InterruptedException ex) {
-            LOG.log(Level.SEVERE, null, ex);
+        } catch (Throwable t) {
+            t.printStackTrace();
         }
-        LOG.info("Didn't receive a video frame from the other side in 15 seconds, return null");
         return null;
     }
 
@@ -372,10 +379,12 @@ byte[] destArr = new byte[(int)len];
         return seg.address();
     }
     
+    @Deprecated
     class VideoFrameCallbackImpl implements createCallEndpoint$videoFrameCallback {
         @Override
         public void apply(MemoryAddress opaque, int w, int h, long size) {
-            LOG.info("Got incoming video frame in Java layer");
+            LOG.info("Got incoming video frame in Java layer, w = "+w+", h = " + h+", size = " + size);
+            System.err.println("Opaque = " + opaque);
             MemorySegment segment = MemorySegment.ofAddress(opaque, size, scope);
             byte[] raw = segment.toArray(ValueLayout.JAVA_BYTE);
             synchronized (frameQueue) {
